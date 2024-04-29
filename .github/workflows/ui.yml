@@ -11,13 +11,11 @@ permissions:
   id-token: write
 
 jobs:
-  main:
+  commit:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout my roam
+      - name: Checkout ui
         uses: actions/checkout@v4
-        with:
-          repository: kijimad/roam
 
       - name: Cache Docker layers
         uses: actions/cache@v4
@@ -27,13 +25,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Get org-roam DB
+      - name: Clone my roam and build
         run: |
+          git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/kijimad/roam
+          cd roam
+
           docker build --target build -t roam-build .
           docker run --detach --name roam-build-container roam-build
           docker cp roam-build-container:/roam/org-roam.db .
           sudo chown -R $USER:$USER ./org-roam.db
           ls -al
+          cp ./org-roam.db ../
+
+          cd ../
+          rm -rf roam
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "auto commit"
+          git push
+
+  main:
+    needs:
+      - commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout my roam
+        uses: actions/checkout@v4
 
       - name: Generate org-roam-ui page
         uses: ikoamu/org-roam-ui-hosting@main
