@@ -51,9 +51,6 @@ jobs:
       - commit
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout my roam
-        uses: actions/checkout@v4
-
       - name: Generate org-roam-ui page
         uses: ikoamu/org-roam-ui-hosting@main
         with:
