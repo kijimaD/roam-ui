@@ -1,0 +1,32 @@
+name: Publish org-roam-ui page
+
+on:
+  push:
+    # branches:
+    #   - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout my roam
+        uses: actions/checkout@v4
+        with:
+          repository: kijimad/roam
+
+      - name: get DB
+        run: |
+          docker build --target build .
+          docker cp build:/roam/org-roam.db .
+          sudo chown -R $USER:$USER ./org-roam.db
+
+      - name: Generate org-roam-ui page
+        uses: ikoamu/org-roam-ui-hosting@main
+        with:
+          org-roam-db-filename: org-roam.db
+          deploy-to-pages: true
