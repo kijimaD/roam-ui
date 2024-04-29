@@ -27,10 +27,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: get DB
+      - name: Get org-roam DB
         run: |
-          docker build --target build .
-          docker cp build:/roam/org-roam.db .
+          docker build --target build -t roam-build .
+          docker run --detach --name roam-build-container roam-build
+          docker cp roam-build-container:/roam/org-roam.db .
           sudo chown -R $USER:$USER ./org-roam.db
 
       - name: Generate org-roam-ui page
