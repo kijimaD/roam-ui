@@ -33,6 +33,7 @@ jobs:
           docker run --detach --name roam-build-container roam-build
           docker cp roam-build-container:/roam/org-roam.db .
           sudo chown -R $USER:$USER ./org-roam.db
+          ls -al
 
       - name: Generate org-roam-ui page
         uses: ikoamu/org-roam-ui-hosting@main
