@@ -24,6 +24,7 @@ cd ../
 
 git status   # check
 git add -N . # 新規ファイルを含める
+# 差分があるときだけコミットする
 if ! git diff --exit-code --quiet
 then
     git config user.name  "github-actions[bot]"
