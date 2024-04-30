@@ -27,8 +27,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/kijimad/roam _pages
-          cp -r _pages pages
+          rm -rf pages
+          git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/kijimad/roam pages
+
           cd pages
 
           docker build --target build -t roam-build .
