@@ -27,24 +27,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/kijimad/roam
-          cd roam
+          rm -rf pages
+          git clone https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/kijimad/roam pages
+
+          cd pages
 
           docker build --target build -t roam-build .
           docker run --detach --name roam-build-container roam-build
           docker cp roam-build-container:/roam/org-roam.db .
           sudo chown -R $USER:$USER ./org-roam.db
+          rm -rf .git
           ls -al
-          cp ./org-roam.db ../
 
           cd ../
-          rm -rf roam
 
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m ":robot: auto commit"
-          git push
+          git add -N . # 新規ファイルを含める
+          if ! git diff --exit-code --quiet
+          then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m ":robot: auto commit"
+            git push
+          fi
 
   main:
     needs:
@@ -54,5 +59,6 @@ jobs:
       - name: Generate org-roam-ui page
         uses: ikoamu/org-roam-ui-hosting@main
         with:
-          org-roam-db-filename: org-roam.db
           deploy-to-pages: true
+          org-roam-directory: pages
+          org-roam-db-filename: org-roam.db

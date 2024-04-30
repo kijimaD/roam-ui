@@ -1,0 +1,474 @@
+:properties:
+:ID: 20221231T215937
+:end:
+#+title:      KDOC 15: Emacs Caskを読む
+#+date:       [2022-12-31 Sat 21:59]
+#+filetags:   :memo:
+#+identifier: 20221231T215937
+
+Caskは[[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]]のプロジェクト管理ツール。ファイルに依存ライブラリを列挙し、同じ環境を再現できる。Caskの仕組みを調べる。
+
+* memo
+:LOGBOOK:
+CLOCK: [2023-01-05 Thu 23:49]--[2023-01-06 Fri 00:14] =>  0:25
+CLOCK: [2023-01-05 Thu 23:14]--[2023-01-05 Thu 23:39] =>  0:25
+CLOCK: [2023-01-05 Thu 22:41]--[2023-01-05 Thu 23:06] =>  0:25
+CLOCK: [2023-01-05 Thu 22:16]--[2023-01-05 Thu 22:41] =>  0:25
+CLOCK: [2023-01-05 Thu 00:29]--[2023-01-05 Thu 00:54] =>  0:25
+CLOCK: [2023-01-04 Wed 23:33]--[2023-01-04 Wed 23:58] =>  0:25
+CLOCK: [2023-01-04 Wed 23:08]--[2023-01-04 Wed 23:33] =>  0:25
+CLOCK: [2023-01-04 Wed 22:40]--[2023-01-04 Wed 23:05] =>  0:25
+CLOCK: [2023-01-04 Wed 22:15]--[2023-01-04 Wed 22:40] =>  0:25
+CLOCK: [2023-01-04 Wed 21:46]--[2023-01-04 Wed 22:11] =>  0:25
+CLOCK: [2023-01-04 Wed 20:04]--[2023-01-04 Wed 20:29] =>  0:25
+CLOCK: [2023-01-04 Wed 19:14]--[2023-01-04 Wed 19:39] =>  0:25
+:END:
+** 機能
+:LOGBOOK:
+CLOCK: [2023-01-04 Wed 14:35]--[2023-01-04 Wed 15:00] =>  0:25
+CLOCK: [2023-01-01 Sun 16:27]--[2023-01-01 Sun 18:00] =>  1:33
+:END:
+そもそもどんな機能があるか。
+
+~define-error~ 各エラーの定義。
+
+~defstruct~ は構造体を定義する Common Lisp の関数。使い方がわからない。
+
+~check-parens~ カッコの対応をチェックする関数。
+** helpの出力
+そもそもinstall以外の機能を知らない。
+
+#+begin_src
+  USAGE: cask [COMMAND] [OPTIONS]
+
+Emacs dependency management made easy
+
+COMMANDS:
+
+ pkg-file                                Write a ‘define-package’ file.
+
+                                         The file is written to the Cask project root path with name
+                                         {project-name}-pkg.el.
+ install                                 Install all packages specified in the Cask-file.
+
+                                         The dependencies to packages are also installed.  If a package
+                                         already is installed, it will not be installed again.
+ update                                  Update package versions.
+
+                                         All packages that are specified in the Cask-file will be updated
+                                         including their dependencies.
+ upgrade                                 Upgrade Cask itself and its dependencies.
+
+                                         This command requires that Cask is installed using Git and that
+                                         Git is available in ‘exec-path’.
+ upgrade-cask                            Upgrade Cask itself and its dependencies.
+
+                                         This command requires that Cask is installed using Git and that
+                                         Git is available in ‘exec-path’.
+ exec [*]                                Execute ARGS with correct ‘exec-path’ and ‘load-path’.
+ version                                 Print version for the current project.
+ list                                    List this package dependencies.
+ info                                    Show info about the current package.
+ help [command]                          Display usage information or documentation for COMMAND-NAME.
+ load-path                               Print ‘load-path’ for all packages and dependencies.
+
+                                         The output is formatted as a colon path.
+ exec-path                               Print ‘exec-path’ for all packages and dependencies.
+
+                                         A dependency will be included in this list of the package has a
+                                         directory called bin in the root directory.
+
+                                         The output is formatted as a colon path.
+ eval <form>                             Eval FORM with the ‘load-path’ set according to the project.
+ path                                    Print ‘exec-path’ for all packages and dependencies.
+
+                                         A dependency will be included in this list of the package has a
+                                         directory called bin in the root directory.
+
+                                         The output is formatted as a colon path.
+ package-directory                       Print current package installation directory.
+ outdated                                Print list of outdated packages.
+
+                                         That is packages that have a more recent version available for
+                                         installation.
+ files                                   Print list of files specified in the files directive.
+                                         If no files directive or no files, do nothing.
+ build                                   Build all Elisp files in the files directive.
+ clean-elc                               Remove all byte compiled Elisp files in the files directive.
+ link [*]                                Manage links.
+
+                                         A link is just that, a symbolic link.  The purpose of the link
+                                         command is that you should be able to work with local
+                                         dependencies.
+
+                                         For example, let’s say you are developing an Emacs package that
+                                         depends on f.el. Consider what happens if you need to extend f.el
+                                         with some function that your package requires.
+
+                                         With the link command, you can checkout f.el locally, add it as a
+                                         link in your local package.  That means that when you require
+                                         f.el, you will require the local package instead of the one
+                                         fetched from the ELPA mirror.  Now you add the desired function
+                                         to f.el and use your library to try it out.
+
+                                         COMMAND-OR-NAME can be one of: delete, list or a link name.
+                                         ARG is sent to some of the commands.
+
+                                         Commands:
+
+                                          $ cask link list
+
+                                           List all project links.
+
+                                          $ cask link name path
+
+                                           Add local link with NAME to PATH.
+
+                                          $ cask link delete name
+
+                                           Delete local link with NAME.
+ package [target-dir]                    Build package and put in TARGET-DIR or dist if not specified.
+ emacs [*]                               Execute emacs with the appropriate environment.
+
+OPTIONS:
+
+ --proxy <host>                          Set Emacs proxy for HTTP and HTTPS to HOST.
+ --http-proxy <host>                     Set Emacs proxy for HTTP to HOST.
+ --https-proxy <host>                    Set Emacs proxy for HTTPS to HOST.
+ --no-proxy <host>                       Set Emacs no-proxy to HOST.
+ --version                               Print Cask’s version.
+ -h [command], --help [command]          Display usage information or documentation for COMMAND-NAME.
+ --debug                                 Turn on debug output.
+ --path <path>                           Run command in this PATH instead of in ‘default-directory’.
+ --verbose                               Be verbose and show debug output.
+ --silent                                Be silent and do not print anything.
+#+end_src
+** eplって何
+パッケージ関連のライブラリ。
+
+- [[https://github.com/cask/epl][cask/epl: Emacs Package Library]]
+
+** 例外を返すcask--exit-error
+渡されたエラーの種類によって正しいメッセージを返す。
+
+#+begin_src git-permalink
+https://github.com/kd-collective/cask/blob/467979414c85bb2ce83f5c6ab9f95721164e9efa/cask.el#L237
+#+end_src
+
+#+RESULTS:
+#+begin_results
+  (defun cask--exit-error (bundle err)
+#+end_results
+** 読み進めるread
+#+caption: read は読み進める関数。1つカーソルが進む
+#+begin_src emacs-lisp
+  (read (current-buffer))
+#+end_src
+** エラーをシグナルする関数signal
+signalはエラーをシグナルする関数。
+** ローカル定義関数を作るcl-flet
+ローカル定義関数を作る。
+** メタプロパティを付与するdeclare
+
+[[https://ayatakesi.github.io/emacs/24.5/elisp_html/Declare-Form.html][Declare Form (GNU Emacs Lisp Reference Manual)]]
+
+関数やマクロにメタプロパティを付与するのに使う。陳腐化マークをつけたり、TABインデント規則をつけたりできる。たとえば通常defunでは第3引数に来るdoc stringを、ほかのマクロで定義するのに使う。
+
+** cask--with-file
+引数のcaskが存在すれば、bodyを評価するマクロ。
+
+- f-file? :: file-regular-p  のエイリアス。regular file って何
+
+** commanderパッケージ
+CLIの実行には、commanderというパーサーライブラリを使っている。これを使ってEmacs Lispで書かれた関数をシェルから呼び出せるようにしている。サブコマンド・オプション・ヘルプ表示などをommanderでしている。
+* Tasks
+* Archives
+** DONE cask-printの仕組み                                           :Write:
+CLOSED: [2023-01-08 Sun 18:59]
+:PROPERTIES:
+:Effort:   02:00
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-08 Sun 18:34]--[2023-01-08 Sun 18:59] =>  0:25
+CLOCK: [2023-01-08 Sun 16:38]--[2023-01-08 Sun 17:03] =>  0:25
+CLOCK: [2023-01-08 Sun 13:20]--[2023-01-08 Sun 13:45] =>  0:25
+CLOCK: [2023-01-08 Sun 12:55]--[2023-01-08 Sun 13:20] =>  0:25
+CLOCK: [2023-01-08 Sun 12:23]--[2023-01-08 Sun 12:49] =>  0:26
+CLOCK: [2023-01-08 Sun 11:58]--[2023-01-08 Sun 12:23] =>  0:25
+CLOCK: [2023-01-08 Sun 11:12]--[2023-01-08 Sun 11:37] =>  0:25
+CLOCK: [2023-01-08 Sun 10:35]--[2023-01-08 Sun 11:00] =>  0:25
+CLOCK: [2023-01-08 Sun 10:10]--[2023-01-08 Sun 10:35] =>  0:25
+CLOCK: [2023-01-08 Sun 09:43]--[2023-01-08 Sun 10:08] =>  0:25
+CLOCK: [2023-01-07 Sat 23:25]--[2023-01-07 Sat 23:50] =>  0:25
+CLOCK: [2023-01-07 Sat 22:46]--[2023-01-07 Sat 23:11] =>  0:25
+:END:
+cask-print内でgreen関数を使って出力を色付けできる。直接green関数は中でないと利用できない。これはどういう仕組みになっているのだろう。
+
+#+caption:
+#+begin_src emacs-lisp
+(cask-print "----" (green "green") "----")
+#+end_src
+
+#+RESULTS:
+#+begin_results
+----[32mgreen[0m----
+#+end_results
+
+#+begin_src git-permalink
+https://github.com/cask/cask/blob/bc168a11d7881a62657cdf19bab2e7966033ec2c/cask.el#L218-L226
+#+end_src
+
+#+RESULTS:
+#+begin_results emacs-lisp
+(cl-defmacro cask-print (&rest body &key stderr &allow-other-keys)
+  "Print messages to `standard-output'.
+
+The BODY of this macro is automatically wrapped with
+`with-ansi' for easier colored output."
+  (delq :stderr body)
+  `(when (or (not (boundp 'cask-cli--silent))
+             (not cask-cli--silent))
+     (princ (with-ansi ,@body) ,(when stderr '(function external-debugging-output)))))
+#+end_results
+
+- cask-print
+  - with-ansi
+
+#+begin_src emacs-lisp
+(with-ansi "----" (green "green"))
+#+end_src
+
+#+RESULTS:
+#+begin_results
+----[32mgreen[0m
+#+end_results
+
+#+caption: ソースコード ansi.el
+#+begin_src emacs-lisp
+(defmacro with-ansi (&rest body)
+  "Shortcut names (without ansi- prefix) can be used in this BODY."
+  (if ansi-inhibit-ansi
+      `(ansi--concat ,@body)
+    `(cl-macrolet
+         ,(mapcar
+           (lambda (alias)
+             (let ((fn (intern (format "ansi-%s" (symbol-name alias)))))
+               `(,alias (string &rest objects)
+                        ,(list 'backquote (list fn ',string ',@objects)))))
+           (append
+            (mapcar 'car ansi-colors)
+            (mapcar 'car ansi-on-colors)
+            (mapcar 'car ansi-styles)
+            (mapcar 'car ansi-csis)))
+       ,(cons 'ansi--concat body))))
+#+end_src
+
+- with~系はだいたいマクロで、バインドされた関数をbodyで渡すフォームで使用できることを示している
+- with-ansi関数の概略
+  - 色のリスト(black white ...)を使って、関数のエイリアスを割り当てる
+    - (ansi-black) (=ansi-white=) マクロがある。それらを、with-ansi 内では(black) (white) で呼び出せるようにエイリアスを張る
+  - macroletの第1引数でマクロ名と関数の中身を定義してるっぽい
+    - だから、第2引数のbody部分では↑マクロが使える
+      - ~,(cons 'ansi--concat body)~ の箇所
+  - consでbodyをansi--concatの引数にしてる。body内のblackとかは、macroletで定義したマクロで解釈される
+
+** DONE fetcherとは何か
+CLOSED: [2023-01-07 Sat 22:46]
+どのバージョン管理システムを使ってダウンロードするかみたい。
+
+#+caption: デフォルト値
+#+begin_src emacs-lisp
+  cask-fetchers
+#+end_src
+
+#+RESULTS:
+#+begin_results
+(:git :bzr :hg :darcs :svn :cvs)
+#+end_results
+
+セットされてないケースもある。ない場合はローカルのファイルから処理する、などの分岐がある。
+
+** DONE どうやってinstallしているか
+CLOSED: [2023-01-07 Sat 22:33]
+:PROPERTIES:
+:Effort:   05:00
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-07 Sat 22:08]--[2023-01-07 Sat 22:33] =>  0:25
+CLOCK: [2023-01-07 Sat 21:43]--[2023-01-07 Sat 22:08] =>  0:25
+CLOCK: [2023-01-07 Sat 17:41]--[2023-01-07 Sat 18:06] =>  0:25
+CLOCK: [2023-01-07 Sat 16:58]--[2023-01-07 Sat 17:23] =>  0:25
+CLOCK: [2023-01-07 Sat 16:32]--[2023-01-07 Sat 16:57] =>  0:25
+CLOCK: [2023-01-07 Sat 16:06]--[2023-01-07 Sat 16:31] =>  0:25
+CLOCK: [2023-01-07 Sat 15:38]--[2023-01-07 Sat 16:03] =>  0:25
+CLOCK: [2023-01-07 Sat 14:25]--[2023-01-07 Sat 14:50] =>  0:25
+CLOCK: [2023-01-07 Sat 12:33]--[2023-01-07 Sat 12:58] =>  0:25
+CLOCK: [2023-01-07 Sat 12:07]--[2023-01-07 Sat 12:32] =>  0:25
+CLOCK: [2023-01-07 Sat 11:42]--[2023-01-07 Sat 12:07] =>  0:25
+CLOCK: [2023-01-07 Sat 00:23]--[2023-01-07 Sat 00:48] =>  0:25
+:END:
+
+- cask-install
+  - cask--with-environment バインドして、bodyを実行する
+    - cl-destructuring-bind 実行結果で変数をバインドする
+      - cask--dependencies-and-missing 依存関係を集める
+      - cask--install-dependency 個別にインストールを実行
+      - missing-dependencies のときはエラーを吐く
+
+bundle構造体に対して、さまざまなアクセサがある感じか。bundleがよくわかってなくてピンときてない感じ。ほとんどの関数はbundleを引数にとる。
+
+- cask--install-dependency
+  - print関係やってる。見覚えがある
+  - 本質的にはepl-install-file か epl-package-install を使ってインストール
+    - install-fileはファイルからインストールし、package installは名前からダウンロードか
+    - fetcherの有無で分岐する
+    - インターネットからダウンロードするか、ローカルファイルからインストールするか、ということか
+  - epl-refresh package descriptionを更新する
+  - cask--checkout-and-package-dependency パッケージのパスを返す
+  - cask-dependency 系はCaskのdepends-on関数で指定されるもの。各依存パッケージが入っている。
+  - cask--with-package 引数がパッケージであればbodyを評価し、パッケージでなければ例外を返す
+  - パッケージ名が存在するか、また必要な値を持っているかチェックして、最後にインストール
+    - 途中でおかしいところがあれば例外を出す
+    - インストールは epl-package-install を使う
+      - 内部的にpackage-install を使う
+    - ダウンロード + 評価される
+
+まとめると、depend-onの情報を元にパッケージ名を特定する。チェックして、既存のインストール関数を使うことでインストールする。fetcherを変更したりもあるので、その分岐も入っている。
+
+** DONE どこでbundle structをセットしているか
+CLOSED: [2023-01-07 Sat 21:24]
+:PROPERTIES:
+:Effort:   2:00
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-07 Sat 21:15]--[2023-01-07 Sat 21:24] =>  0:09
+CLOCK: [2023-01-07 Sat 19:25]--[2023-01-07 Sat 19:50] =>  0:25
+CLOCK: [2023-01-07 Sat 18:07]--[2023-01-07 Sat 18:32] =>  0:25
+:END:
+テストを見ればよさそうに見える。
+
+- cask-test/with-bundle Caskファイルの中身を渡して、生成する + body評価。bundleがバインドされてる
+  - cask-test/with-sandbox
+    - f-with-sandbox
+- (cask-setup cask-test/sandbox-path) みたいな感じでbundleが生成されている。プロジェクトディレクトリを指定してcask-setupによってパースを開始する、ということか。パース結果がbundleである
+- CLIから実行した場合も、全く同じようにcask-setupでbundleを用意する。CLIのパスが使われ、キャッシュとして変数に実行結果が保存されるというだけの違い
+
+#+caption: cask-bundleの中身にアクセスする
+#+begin_src emacs-lisp :results output
+  (cask-bundle-name (cask-setup "~/.emacs.d"))
+  (cask-bundle-version (cask-setup "~/.emacs.d"))
+  (cask-bundle-description (cask-setup "~/.emacs.d"))
+  (cask-bundle-runtime-dependencies (cask-setup "~/.emacs.d"))
+  (cask-bundle-development-dependencies (cask-setup "~/.emacs.d"))
+  (cask-bundle-path (cask-setup "~/.emacs.d"))
+  (cask-bundle-patterns (cask-setup "~/.emacs.d"))
+  (cask-bundle-sources (cask-setup "~/.emacs.d"))
+#+end_src
+
+#+RESULTS:
+#+begin_results
+#+end_results
+
+- cask-bundleの中にcask-dependency[]がある。dependencyにnameやversionが含まれていて、名前を元にダウンロードする
+- Caskに書かれているコードはリストとして処理される。構造体に格納され、伝播する
+** DONE ansi--define
+CLOSED: [2023-01-09 Mon 00:41]
+:PROPERTIES:
+:Effort:   2:00
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-08 Sun 18:59]--[2023-01-08 Sun 19:24] =>  0:25
+:END:
+
+Caskというかansiパッケージの話。どういう仕組みになっているか。
+(ansi--define red) という風に色を定義している。
+
+#+caption: ansi.el
+#+begin_src emacs-lisp
+(defmacro ansi--define (effect)
+  "Define ansi function with EFFECT."
+  (let ((fn-name (intern (format "ansi-%s" (symbol-name effect)))))
+    `(defun ,fn-name (format-string &rest objects)
+       ,(format "Add '%s' ansi effect to text." effect)
+       (apply 'ansi-apply (cons ',effect (cons format-string objects))))))
+#+end_src
+
+- ansi--define(my-test) とすると、ansi-my-test関数が定義される
+  - defunの次の行はdocstring
+  - ansi-apply 内で呼び出されるansi--code関数で、色名と番号を紐づけている。だからansi--defineでの引数がgreenだとgreenでansi-applyされて対応する32が取り出され、その内容でansi-green関数が定義される
+  - 適当な名前でansi-defineしても、関数は定義される。しかし、対応するコードが存在しないため実行時エラーになる
+
+#+begin_src emacs-lisp
+(ansi-green "green")
+#+end_src
+
+#+RESULTS:
+#+begin_results
+[32mgreen[0m
+#+end_results
+
+** DONE どうやってDSLを定義しているか
+CLOSED: [2023-01-09 Mon 00:41]
+:PROPERTIES:
+:Effort:   02:00
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-08 Sun 22:17]--[2023-01-08 Sun 22:42] =>  0:25
+CLOCK: [2023-01-08 Sun 21:50]--[2023-01-08 Sun 22:15] =>  0:25
+CLOCK: [2023-01-08 Sun 21:25]--[2023-01-08 Sun 21:50] =>  0:25
+CLOCK: [2023-01-08 Sun 21:00]--[2023-01-08 Sun 21:25] =>  0:25
+:END:
+
+Cask-fileではいくつかのDSLが使えるが、その仕組みはどうなっているか。
+
+驚くほどシンプルに実装できる。
+
+- cask--eval で定義している
+  - dolistで各リスト処理。それぞれのcarを見て、cl-case分岐
+  - キーワードがcaseで引っかかるようになっていて、その処理が走る
+    - たとえば引数formsが(source 1) の場合は、case条件でsource が一致してそこの処理が走る、というだけのこと
+  - DSLの引数はcl-destructuring-bindでformからバインドする
+
+これによって、処理全体中の、ファイルから構造体に読み込む部分が理解できた。
+
+- たとえばdepend-onの場合は、bundleに値を追加する。DSLを処理する段階ではグローバルな状態を保持するbundle structに集積していく
+- あとから、bundleからまとめて必要な値を取り出してインストールする、みたいな感じ
+** CLOSE recipeとは何か                                               :Write:
+CLOSED: [2023-01-09 Mon 13:47]
+:PROPERTIES:
+:Effort:   00:30
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-08 Sun 19:34]--[2023-01-08 Sun 19:59] =>  0:25
+:END:
+
+たまに見るがどういう意味なのだろう。パッケージのビルドと関係ありそうに見える。Melpaのレシピでは、パッケージ名とかURLを指定するが…ここではどういう意味なのだろう。
+
+- package-recipe.el がある
+  - package-recipeというクラスがある
+  - 組み込みでpackage-build というコマンドがある。対応する何かなのだろう
+** CLOSE cask installが遅い理由                                       :Write:
+CLOSED: [2023-01-09 Mon 13:47]
+:PROPERTIES:
+:Effort:   2:00
+:END:
+:LOGBOOK:
+CLOCK: [2023-01-09 Mon 11:08]--[2023-01-09 Mon 11:33] =>  0:25
+CLOCK: [2023-01-09 Mon 10:33]--[2023-01-09 Mon 10:58] =>  0:25
+:END:
+
+わからない。
+
+すでに存在していても、0.5秒くらいかかるので、300パッケージあると150秒かかる。
+
+ひとつひとつ通信しているように見える。ローカルだけだとこんなにかからないはずだ。なぜかMacだとすぐ終わっていたはずだが、わからない。
+
+- ダウンロードは、いくつかチェックがあって最終的に走る
+- すでにダウンロードされていると判定すれば、途中で抜けるので早いはず、だがここがあまり早くない
+- その前の判定に比較的時間のかかる箇所があるように見える
+- cask--dependency-installed-p ですでにダウンロードされてるかの判定をしている
+  - 内部的に epl-package-installed-p を使っている
+  - 引数に構造体epl-packageを取る。epl-package-create 関数を使って構造体を初期化する
+  - 通信は発生してなさそう
+    - さらに内部でpackage-installed-p を使っている
+    - =package-activated-list= でチェック

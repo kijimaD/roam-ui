@@ -1,0 +1,638 @@
+:PROPERTIES:
+:ID:       2709c815-cd38-4679-86e8-ff2d3b8817e4
+:END:
+#+title: Insomnia
+
+#+caption: ページ間のリンクを示す
+#+BEGIN_EXPORT html
+<script defer src='https://cdnjs.cloudflare.com/ajax/libs/d3/7.2.1/d3.min.js' integrity='sha512-wkduu4oQG74ySorPiSRStC0Zl8rQfjr/Ty6dMvYTmjZw6RS5bferdx8TR7ynxeh79ySEp/benIFFisKofMjPbg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+<script defer src='js/graph.js'></script>
+
+<div id="main-graph">
+  <svg>
+  <defs>
+    <filter x="0" y="0" width="1" height="1" id="solid">
+      <feflood flood-color="#f7f7f7" flood-opacity="0.9"></feflood>
+      <fecomposite in="SourceGraphic" operator="xor"></fecomposite>
+    </filter>
+  </defs>
+  <rect id="base_rect" width="100%" height="100%" fill="#ffffff"></rect>
+  </svg>
+</div>
+#+END_EXPORT
+
+ページ間のリンク図[fn:1]。
+
+* 概要
+
+このドキュメントはプログラム関連の文書シリーズである。この文書の目的は主に3つある。
+
+1. プログラマとして直面した雑事を記録して未来の問題解決に利用すること
+
+  過去詰まったのと同じ問題にあたることはよくあるので、記録しておくとすぐ辿り着いて解決できる可能性が高まる。ググるだけだと、検索順位が変わったり検索ワードを忘れて、二度とたどりつけなくなることが多かった。また、よりよい方法を思いついたときにすでにベースがあると少しつづ改良する基盤にできる。
+
+2. 得たことを *大量に* 収集する保存場所
+
+  人は大量に集まったものをすごい、熱意があると考える傾向がある。自身の行動も例外でなく、量を前にして自分はそれが好きなのだと錯覚していく。熱意は生まれ持ったものでなく、自分から迎えに行くものだと考えている。量はさらなるモチベーションを生み出し、より収集し、より好きになる循環が生まれる。そうして徐々に錯覚でなく本物になっていく。だから集める。大量に収集するにはそれなりに構造化し、整理した状態を保つ必要がある。
+
+3. 新しいアイデア・洞察を得る
+
+  ものごとを整理し、着想を得る基盤にする。新しいアイデアといっても、組み合わせにすぎない。しかし組み合わせるためには既存のものを整理し本質をよく理解しておくことが必要であり、そのための準備をする。
+
+すべて自分のためである。しかし未来の自分は他人なので、文脈を共有しない他人が見て理解できるように書く。
+
+作成者の情報。
+
+|----------+------------------------|
+| 氏名     | 貴島 大悟 Kijima Daigo |
+| 生年月日 | 1998-03-28             |
+| 居住地   | 東京                   |
+| 最終学歴 | 鹿児島大学 法文学部    |
+| GitHub   | [[https://github.com/kijimaD][kijimaD]]                |
+
+関連リンク。
+
+- 作成者の[[id:a0f58a2a-e92d-496e-9c81-dc5401ab314f][経歴]]
+- GitHubの[[https://github.com/kijimaD/central][統計情報]]
+
+* KDOC
+ナンバリングした、1エントリで完結する文章。
+
+** 🖼️ ドラフト
+
+作成途中。
+
+#+BEGIN: denote-links :regexp "_draft.*org"
+#+END:
+
+** ⌨ コード
+
+コードのメモ。1つのアイデアを表現する。
+
+#+BEGIN: denote-links :regexp "_code.*org"
+#+END:
+
+** ✏ エッセイ
+
+日々考えたこと。1つのアイデアを表現する。
+
+#+BEGIN: denote-links :regexp "_essay.*org"
+#+END:
+
+** 📖 文献メモ
+
+読んだ本のメモ。
+
+#+BEGIN: denote-links :regexp "_book.*org"
+#+END:
+
+** 📝 メモ
+
+一時的な、削除可能なメモ。
+
+#+BEGIN: denote-links :regexp "_memo.org"
+#+END:
+
+** 📚 すべて
+
+すべて。
+
+#+BEGIN: denote-links :regexp ".*org"
+#+END:
+
+* 構成
+
+このドキュメントはツェッテルカステンライクな方法で構成する。あとで組み合わせてアイデアを得られるように、取り出しやすい形で整理しておく。
+
+#+caption: 構成
+[[file:./images/20231015-denote.drawio.svg]]
+
+- 永続メモ
+
+  永続するメモ。後で見て単独で意味がわかるように、完全に文脈を備えた、整理された短い文章。他の永続メモとリンクさせて書く。後からリンクをたどらず見る用にゆるやかなカテゴリ構造を持つ。1つのメモにカテゴリは複数つくことがある。
+
+- 文献メモ
+
+  文献のメモ。残す。本から得られたことを自分の言葉で書き直す。得たアイデアは永続メモにリンクさせる。
+
+- 一時メモ
+
+  一時的なメモ。時間が経つか永続メモに清書したら消す。
+
+[[id:815a2c31-7ddb-40ad-bae0-f84e1cfd8de1][Org-roam]]部分はwiki的な感じで、単なる巨大なメモとスケジュール管理になっている。ファイルはカテゴリごとに分かれているが、両方に含まれるような項目もあったりして、どうにかしたい。
+
+参考。
+
+- [[id:20231009T155942][KDOC 38: ツェッテルカステンのやり方]]
+- [[https://gigazine.net/news/20200604-zettelkasten-note/][効率的なノートを作成できるドイツの社会学者が生み出した方法「Zettelkasten」とは？ - GIGAZINE]]
+- [[https://studyhacker.net/memo-zettelkasten][天才社会学者がやっていた。大量アウトプットを可能にする驚異のメモ術「ツェッテルカステン」って知ってる？ - STUDY HACKER]]
+- [[id:20221027T235104][KDOC 3: 『「ない仕事」の作り方』を読んだ]]
+- [[id:20240204T105547][KDOC 71: KDOCエントリの書き方]]
+* Slides
+
+#+HTML_HEAD: <style>.src { display: none; }</style>
+#+caption: PDF一覧
+#+begin_src emacs-lisp :results output :wrap EXPORT html
+  (require 'cl)
+  (setq urls (mapcar #'file-name-nondirectory (directory-files "./pdfs" t "\\.pdf$"))  )
+  (loop for x in urls
+        do (princ (format "<li><a href='./pdfs/index.html?file=%s'>%s</a></li>\n" x x)))
+#+end_src
+
+* Repository stat
+この文書は[[https://github.com/kijimaD/roam][kijimaD/roam]]でバージョン管理されている。リポジトリの統計を図示した。
+
+↓期間ごとで、リポジトリのファイル数を示す[fn:2]。
+
+#+CAPTION: Number of files(.org only)
+#+ATTR_HTML: :alt Number of files image :title Files :align right
+[[./git-file.png]]
+
+↓期間ごとで、リポジトリの行数を示す。
+
+#+CAPTION: Number of lines(.org only)
+#+ATTR_HTML: :alt Number of lines image :title Lines :align right
+[[./git-line.png]]
+
+実際の数字を数える。この数字を目的にすることはなく、単に客観的に把握するためのメトリクスとして使う。
+
+#+HTML_HEAD: <style>.src { display: none; }</style>
+#+caption: 統計情報。ビルド時に実行される
+#+begin_src bash :results raw
+  file_changed_count_day() {
+      datestr_past=$1
+      datestr_future=$2
+
+      count=`git whatchanged --diff-filter=A --since="$datestr_past" --until="$datestr_future"--format=oneline --name-only --pretty=format: | grep -e ".*org" | sort -u | wc -l`
+      printf "%s %s " `date --date "$datestr_past" "+%Y-%m-%d"` $count
+      for (( i = 0; i < $count; i++ )); do
+          printf "%s" "+"
+      done
+      echo
+  }
+
+  echo ビルド時刻 `TZ=JST-9 date "+%F+%T"`
+  echo .orgファイル数 `find . -maxdepth 1 -type f -name "*.org" | grep -c "\.org$"`
+  echo .orgファイルサイズ `du -h -c ./*.org | tail -n 1 | sed 's/\ttotal//'`
+  echo 画像ファイル数 `find ./images -type f -name "*.png" -o -name "*.svg" | wc -l`
+  echo 画像ファイルサイズ `du -h -c ./images/* | tail -n 1 | sed 's/\ttotal//'`
+
+  total_multi_count=0
+  total_line_count=0
+
+  for file in ./*.org ; do
+      if [ -f "$file" ]; then
+          multi_count=$(wc -m < "$file") # マルチバイト
+          line_count=$(wc -l < "$file")
+      fi
+      total_multi_count=$((total_multi_count + multi_count))
+      total_line_count=$((total_line_count + line_count))
+  done
+  echo
+  echo 文字数 ${total_multi_count}文字
+  echo 1ページ600文字とすると $((total_multi_count / 600))ページ
+  echo 本1冊300ページとすると $((total_multi_count / 600 / 300))冊
+  echo 本1冊10万文字とすると $((total_multi_count / 100000))冊
+  echo 本1冊2cmとすると $((total_multi_count / 100000 * 2))cm
+  echo
+  echo 行数 ${total_line_count}行
+  echo 60行入るﾃﾞｨｽﾌﾟﾚｲだと $((total_line_count / 60))枚分
+  echo 14インチﾃﾞｨｽﾌﾟﾚｲだと $((total_line_count / 60 * 17 / 100))メートル
+  echo
+  echo "句点の数" `grep -rohE '。' ./*.org | wc -l`
+  echo "読点の数" `grep -rohE '、' ./*.org | wc -l`
+  echo "改行の数" `grep -rohE '\n' ./*.org | wc -l`
+  echo
+  echo "外部リンクの数" `grep -rohE 'https?://' ./*.org | wc -l`
+  echo "内部リンクの数" `grep -rohE '\[\[id:.+?\]' ./*.org | wc -l`
+  echo "見出し1の数" `grep -rohE '^\*\s+[^\s]' ./*.org | wc -l`
+  echo "見出し2の数" `grep -rohE '^\*\*\s+[^\s]' ./*.org | wc -l`
+  echo "見出し3の数" `grep -rohE '^\*\*\*\s+[^\s]' ./*.org | wc -l`
+  echo "リストの数" `grep -rohE '^-\s+[^\s]' ./*.org | wc -l`
+  echo "脚注の数" `grep -rohE '\[fn:.+?\]' ./*.org | wc -l`
+  echo "挿入画像の数" `grep -rohE '^\[\[file:.+?\]\]' ./*.org | wc -l`
+  echo
+  echo "TODOの数" `grep -rohE '^\*.+?\sTODO' ./*.org | wc -l`
+  echo "DONEの数" `grep -rohE '^\*.+?\sDONE' ./*.org | wc -l`
+  echo "WAITの数" `grep -rohE '^\*.+?\sWAIT' ./*.org | wc -l`
+  echo "WIPの数" `grep -rohE '\*.+?\sWIP' ./*.org | wc -l`
+  echo "ステータスの数" `grep -rohE '^\*.+?\s(TODO|DONE|WAIT|WIP)' ./*.org | wc -l`
+  echo
+  echo "KDOCの数" `ls | grep "\-kdoc\-" | wc -l`
+  echo "メモの数" `ls | grep -E "\-kdoc\-.+?_memo" | wc -l`
+  echo "本の数" `ls | grep -E "\-kdoc\-.+?_book" | wc -l`
+  echo "ドラフトの数" `ls | grep -E "\-kdoc\-.+?_draft" | wc -l`
+  echo "エッセイの数" `ls | grep -E "\-kdoc\-.+?_essay" | wc -l`
+  echo "コードの数" `ls | grep -E "\-kdoc\-.+?_code" | wc -l`
+  echo
+  echo "コミット数" `git rev-list --count HEAD`
+  echo "最初のｺﾐｯﾄ" `git log --date=iso --date=format:"%Y-%m-%d+%H:%M:%S" --pretty=format:"%ad" --reverse | head -n 1`
+  echo "最新のｺﾐｯﾄ" `git log --date=iso --date=format:"%Y-%m-%d+%H:%M:%S" --pretty=format:"%ad" | head -n 1`
+  echo
+  echo "追加ファイル"
+  echo "2年間" `git whatchanged --diff-filter=A --since="2 year ago" --format=oneline --name-only --pretty=format: | grep -e ".*org" | sort -u | wc -l`
+  echo "1年間" `git whatchanged --diff-filter=A --since="1 year ago" --format=oneline --name-only --pretty=format: | grep -e ".*org" | sort -u | wc -l`
+  echo "1ヶ月間" `git whatchanged --diff-filter=A --since="1 month ago" --format=oneline --name-only --pretty=format: | grep -e ".*org" | sort -u | wc -l`
+  echo "1週間" `git whatchanged --diff-filter=A --since="1 week ago" --format=oneline --name-only --pretty=format: | grep -e ".*org" | sort -u | wc -l`
+  file_changed_count_day "1 day ago" "0 day ago"
+  file_changed_count_day "2 days ago" "1 day ago"
+  file_changed_count_day "3 days ago" "2 days ago"
+  file_changed_count_day "4 days ago" "3 days ago"
+  file_changed_count_day "5 days ago" "4 days ago"
+  file_changed_count_day "6 days ago" "5 days ago"
+  file_changed_count_day "7 days ago" "6 days ago"
+  echo
+  echo "MDNの引用数" `grep -rohE 'https://developer\.mozilla\.org' ./*.org | wc -l`
+  echo "RFCの引用数" `grep -rohE 'https://www.rfc-editor\.org' ./*.org | wc -l`
+#+end_src
+
+#+caption: Built with Emacs
+#+HTML_HEAD: <style>.src { display: none; }</style>
+#+begin_src emacs-lisp :results raw
+  (format "Built with: %s" (emacs-version))
+#+end_src
+
+#+caption: Built with Org
+#+HTML_HEAD: <style>.src { display: none; }</style>
+#+begin_src emacs-lisp :results raw
+  (format "Built with: Org version %s" (org-version))
+#+end_src
+
+* Recent activity
+[[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]]の[[id:7e85e3f3-a6b9-447e-9826-307a3618dac8][org-mode]]により時刻記録して、clock-tableとorg-agendaで出力した結果を示す。
+** Pomodoro
+ポモドーロ統計の図。
+
+#+caption: ポモドーロ統計の図
+ #+BEGIN_EXPORT html
+ <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+ <script type="text/javascript">
+ google.charts.load("current", {packages:["calendar"]});
+ google.charts.setOnLoadCallback(drawChart);
+
+ function drawChart() {
+  scores = csvToArray("js/pmd.csv").map(function (value) {
+   return [new Date(value[0]), Number(value[1])];
+  })
+
+  var dataTable = new google.visualization.DataTable();
+  dataTable.addColumn({ type: 'date', id: 'Date' });
+  dataTable.addColumn({ type: 'number', id: 'Score' });
+  dataTable.addRows(scores);
+
+  var chart = new google.visualization.Calendar(document.getElementById('calendar_basic'));
+
+  var options = {
+    title: "Pomodoro stats",
+  };
+
+  chart.draw(dataTable, options);
+ }
+
+ function csvToArray(filename) {
+
+   // CSVファイルを文字列として取得
+   var srt = new XMLHttpRequest();
+   srt.open("GET", filename, false);
+   try {
+     srt.send(null);
+   } catch (err) {
+     console.log(err)
+   }
+
+   // 配列を用意
+   var csvArr = [];
+
+   // 改行ごとに配列化
+   var lines = srt.responseText.split("\n");
+
+   // 1行ごとに処理
+   for (var i = 0; i < lines.length; ++i) {
+     var cells = lines[i].split(",");
+     if (cells.length != 1) {
+       csvArr.push(cells);
+     }
+   }
+   return csvArr;
+ }
+ </script>
+
+ <body>
+ <div id="calendar_basic" style="width: 1000px; height: 350px;"></div>
+ </body>
+ #+END_EXPORT
+** This Week by Day
+今週の記録。
+
+#+BEGIN: clocktable :maxlevel 3 :scope agenda :tags "" :block thisweek :step day :stepskip0 true :fileskip0 true :link true :maxlevel 2 :timestamp true :indent true
+#+END:
+** This Month
+今月の記録。
+
+#+BEGIN: clocktable :maxlevel 3 :scope agenda :tags "" :block thismonth :step month :stepskip0 true :fileskip0 true :link true :maxlevel 2 :timestamp true :indent true
+#+END:
+** COMMENT Last 30 days log
+# あまり意味がない気がするので非表示にしている。
+#+BEGIN_EXPORT html
+<iframe src="./agenda.html"
+        style="width: 100%;"></iframe>
+#+END_EXPORT
+** COMMENT columnview
+:OUTPUT_CONFIG:
+#+COLUMNS: %35ITEM(Goals/Activities) %TODO(Status){C+} %STARTED(Started) %CLOSED(Completed)
+:END:
+
+#+BEGIN: columnview :hlines 1 :indent t :id global
+
+#+END:
+* Tasks                                                            :noexport:
+文書全体、サイトビルドに関するタスクを記述する。
+
+** TODO org-roam-uiをページに載せる
+- [[https://zenn.dev/ikoamu/articles/7193dbcf62fff8][GitHub ActionsでGitHub Pagesにorg-roam-uiを公開する]]
+
+かなりいい感じなので、見られるようにする。
+** TODO gitグラフのスクリプトを共通化する
+同じ内容が重複しているのでまとめる。共通化すればもっといろんなことに使えるはず。
+* Archives                                                         :noexport:
+** DONE roamを直す
+CLOSED: [2024-03-17 Sun 23:09]
+:LOGBOOK:
+CLOCK: [2024-03-17 Sun 22:43]--[2024-03-17 Sun 23:08] =>  0:25
+:END:
+
+~make update-index~ で、プロンプトが出てきてCIで失敗するのを直す。
+
+- 変なエンコードが1箇所含まれたために、エンコードを尋ねる画面が出ていた。消したら直った。
+
+** DONE サイトindexにstatカードを表示する
+CLOSED: [2021-09-25 Sat 00:19]
+- https://qiita.com/zizi4n5/items/f8076cb25bbf64a9bc1c
+** DONE ファイル数グラフを追加する
+いい感じに増加しているのを見たい。
+[[id:90c6b715-9324-46ce-a354-63d09403b066][Git]]から、各期間での数を抽出すればいい。
+** DONE ファイルサイズで並べる
+CLOSED: [2021-09-10 Fri 17:49]
+ファイルを並べた。
+** DONE clock table作成
+CLOSED: [2021-09-23 Thu 14:50]
+:LOGBOOK:
+CLOCK: [2021-09-23 Thu 13:48]--[2021-09-23 Thu 13:56] =>  0:08
+CLOCK: [2021-09-23 Thu 12:26]--[2021-09-23 Thu 13:28] =>  1:02
+CLOCK: [2021-09-23 Thu 11:29]--[2021-09-23 Thu 11:57] =>  0:28
+CLOCK: [2021-09-23 Thu 11:14]--[2021-09-23 Thu 11:17] =>  0:03
+:END:
+スケジュール表示よりこっちのほうが見やすい。
+** CLOSE ファイルサイズの棒グラフを作成する
+CLOSED: [2021-09-23 Thu 22:26]
+:LOGBOOK:
+CLOCK: [2021-09-23 Thu 22:06]--[2021-09-23 Thu 22:26] =>  0:20
+CLOCK: [2021-09-23 Thu 21:16]--[2021-09-23 Thu 21:41] =>  0:25
+:END:
+
+ファイルごとで棒グラフみたくしたかったのだが、ファイルの数が多すぎてうまくいかなかった。
+また、一部の割合が大きくそのほかは0.1%代なのでグラフとしてあまり意味をもたなかった。
+
+#+begin_src bash :eval never
+set terminal dumb feed 80 50
+
+set datafile separator ","
+set noxtics
+
+plot "character-count.dat" using 2:0:ytic(1) with lines notitle
+#+end_src
+
+** DONE コマンド整理
+CLOSED: [2021-12-28 Tue 20:08]
+:LOGBOOK:
+CLOCK: [2021-12-28 Tue 18:38]--[2021-12-28 Tue 20:08] =>  1:30
+:END:
+ディレクトリを移動してrootを綺麗にした。
+** DONE ファイルグラフの表示項目を増やす
+CLOSED: [2022-01-04 Tue 12:46]
+- ページランク, タイトル, 文字数カウント, 変更回数、最終変更日(相対日付)、変更回数
+** DONE Docker環境作成する
+CLOSED: [2022-01-04 Tue 12:46]
+:LOGBOOK:
+CLOCK: [2021-12-30 Thu 21:35]--[2021-12-30 Thu 23:01] =>  1:26
+:END:
+複数の依存環境があり、環境構築が面倒なので。
+
+- Ruby
+- Python
+- sqlite
+- Emacs
+** DONE org-roam.dbを使って有用な情報取得
+CLOSED: [2022-01-04 Tue 12:46]
+:LOGBOOK:
+:END:
+ファイルの名前、接続してるファイルの数(ページランクができる)を表にできそうな感じ。今はlsでやってる部分。
+** CLOSE Write self introduction in English
+CLOSED: [2022-01-29 Sat 17:06]
+** DONE イメージ作成する
+CLOSED: [2022-02-03 Thu 10:02]
+:LOGBOOK:
+CLOCK: [2022-01-29 Sat 20:20]--[2022-01-29 Sat 20:45] =>  0:25
+CLOCK: [2022-01-29 Sat 19:07]--[2022-01-29 Sat 19:32] =>  0:25
+:END:
+開発・ビルドを[[id:1658782a-d331-464b-9fd7-1f8233b8b7f8][Docker]]でできるようにする。
+
+- [[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]]とsqliteがうまく動かない。GitHub ActionでやっているEmacsイメージ的なのでは起こらない。
+- マルチステージビルドがうまくいかない。依存は、主に[[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]], [[id:cfd092c4-1bb2-43d3-88b1-9f647809e546][Ruby]], [[id:a6c9c9ad-d9b1-4e13-8992-75d8590e464c][Python]]の3つ(他にもある)。
+
+[[id:6b889822-21f1-4a3e-9755-e3ca52fa0bc4][GitHub]] Actionがないとビルドできない状態なので、手元で一通り実行できるようにして、同じ方法で本番ビルドも行えるようにしたい。
+** DONE デプロイをdockerでやる
+CLOSED: [2022-02-03 Thu 10:03]
+作ったイメージでデプロイするように。高速。
+** DONE イメージ改良
+CLOSED: [2022-02-06 Sun 00:31] DEADLINE: <2022-02-05 Sat 23:59>
+:LOGBOOK:
+CLOCK: [2022-02-05 Sat 10:25]--[2022-02-05 Sat 10:50] =>  0:25
+:END:
+遅いので改良する。
+** DONE テスト追加する
+CLOSED: [2022-02-06 Sun 10:52]
+ビルドのテストがない。
+
+実行テストが成功したら、タグをつけてpushしたい。
+新しいビルド内容でpublishできるか試すようにした。
+** DONE lint追加
+CLOSED: [2022-02-11 Fri 17:46]
+:LOGBOOK:
+CLOCK: [2022-02-09 Wed 22:22]--[2022-02-09 Wed 22:47] =>  0:25
+CLOCK: [2022-02-06 Sun 10:54]--[2022-02-06 Sun 11:19] =>  0:25
+:END:
+- dockerfile
+- image内容
+- github actions
+いつでも実行できるようにしたが、まだエラーが多くCIで実行できない。
+** DONE pomodoroグラフを記録・表示する
+CLOSED: [2022-02-26 Sat 00:13]
+:LOGBOOK:
+CLOCK: [2022-02-13 Sun 11:57]--[2022-02-13 Sun 12:22] =>  0:25
+CLOCK: [2022-02-13 Sun 11:17]--[2022-02-13 Sun 11:42] =>  0:25
+CLOCK: [2022-02-13 Sun 10:50]--[2022-02-13 Sun 11:15] =>  0:25
+:END:
+デイリーで測ってるやつをファイルに保存しておいて、描画すればよさそう。
+** DONE dockerジョブを改良
+CLOSED: [2022-02-27 Sun 14:34]
+:LOGBOOK:
+CLOCK: [2022-02-26 Sat 20:06]--[2022-02-26 Sat 20:31] =>  0:25
+CLOCK: [2022-02-26 Sat 19:13]--[2022-02-26 Sat 19:38] =>  0:25
+CLOCK: [2022-02-26 Sat 14:23]--[2022-02-26 Sat 14:48] =>  0:25
+CLOCK: [2022-02-26 Sat 13:25]--[2022-02-26 Sat 13:50] =>  0:25
+CLOCK: [2022-02-26 Sat 11:06]--[2022-02-26 Sat 11:31] =>  0:25
+CLOCK: [2022-02-26 Sat 00:14]--[2022-02-26 Sat 00:39] =>  0:25
+:END:
+- herokuのコンテナデプロイがおかしい
+- イメージサイズがでかくてビルドに時間がかかる
+** CLOSE stagingビルドが終わったらPRにコメントする
+CLOSED: [2022-02-28 Mon 23:05]
+:LOGBOOK:
+CLOCK: [2022-02-28 Mon 22:29]--[2022-02-28 Mon 22:54] =>  0:25
+CLOCK: [2022-02-28 Mon 21:59]--[2022-02-28 Mon 22:24] =>  0:25
+:END:
+UI上できたかわからないので。
+
+あまりよくわからないのでやらない。
+** DONE Upptimeで死活監視してみる
+CLOSED: [2022-02-28 Mon 23:06]
+:LOGBOOK:
+CLOCK: [2022-02-28 Mon 10:27]--[2022-02-28 Mon 10:52] =>  0:25
+:END:
+サイレントにデプロイ失敗していることが多い。
+[[id:6b889822-21f1-4a3e-9755-e3ca52fa0bc4][GitHub]] Actionsだけでできるらしい。
+** DONE デザイン調整
+CLOSED: [2022-05-08 Sun 11:47]
+:LOGBOOK:
+CLOCK: [2022-05-06 Fri 21:42]--[2022-05-06 Fri 22:07] =>  0:25
+CLOCK: [2022-05-06 Fri 21:17]--[2022-05-06 Fri 21:42] =>  0:25
+CLOCK: [2022-05-05 Thu 23:07]--[2022-05-05 Thu 23:32] =>  0:25
+:END:
+** DONE 更新してないファイルを検知してissue化させる
+CLOSED: [2022-07-02 Sat 09:15]
+[[id:6b889822-21f1-4a3e-9755-e3ca52fa0bc4][GitHub]] Actionで定期タスクを実行して、issue化させる。
+一定期間過ぎてるファイルリストを出して、それらをまとめたIssueを作らせるとよさそう。
+
+Stalefileを作成した。
+** DONE LintをCIで実行する
+CLOSED: [2022-07-03 Sun 15:08]
+:LOGBOOK:
+CLOCK: [2022-05-22 Sun 15:42]--[2022-05-22 Sun 16:07] =>  0:25
+CLOCK: [2022-05-22 Sun 15:16]--[2022-05-22 Sun 15:41] =>  0:25
+:END:
+** DONE Makefileをリファクタリング
+CLOSED: [2022-07-03 Sun 15:08]
+:LOGBOOK:
+:END:
+サイトのビルドは[[id:375ccc99-c86e-4d3e-9367-550286dccba4][Make]]でしている。
+
+全然使いこなせてないので、ちゃんとしたMakefileの書き方で書く。
+[[id:5ba43a42-93cb-48fa-8578-0558c757493f][magit]]のMakefileが参考になりそう。
+https://github.com/kd-collective/magit/blob/877c389ca0161959081fa2c77045ce1ae9463be4/Documentation/Makefile#L1
+** DONE ディレクトリ整理
+CLOSED: [2022-07-03 Sun 15:08]
+** DONE PRのテスト失敗を直す
+CLOSED: [2022-09-25 Sun 10:28]
+:LOGBOOK:
+CLOCK: [2022-09-25 Sun 10:00]--[2022-09-25 Sun 10:25] =>  0:25
+CLOCK: [2022-09-25 Sun 10:25]--[2022-09-25 Sun 10:50] =>  0:25
+:END:
+失敗している。
+** DONE サイトデザインを戻す
+CLOSED: [2022-09-25 Sun 15:41]
+:LOGBOOK:
+CLOCK: [2022-09-25 Sun 13:24]--[2022-09-25 Sun 13:49] =>  0:25
+CLOCK: [2022-09-25 Sun 12:45]--[2022-09-25 Sun 13:10] =>  0:25
+CLOCK: [2022-09-25 Sun 11:45]--[2022-09-25 Sun 12:10] =>  0:25
+:END:
+前の方が良い。
+** DONE herokuを直す
+CLOSED: [2022-09-25 Sun 15:41]
+:LOGBOOK:
+CLOCK: [2022-09-25 Sun 11:20]--[2022-09-25 Sun 11:45] =>  0:25
+CLOCK: [2022-09-25 Sun 10:55]--[2022-09-25 Sun 11:20] =>  0:25
+:END:
+ステージングが動くようにする。
+** DONE 記法ルール
+CLOSED: [2023-02-11 Sat 16:50]
+適当なので、構造のルールとか決める。ルールをlintで検知できるようにする。
+
+- 階層を3階層以上作らない。あとから変更しにくいから。浅く広く構築していく
+- コードには必ずキャプションをつける。あとから見てわからなくなることが多いので、意味が重複してもつける
+** DONE denoteの一覧表示する
+CLOSED: [2023-07-16 Sun 01:16]
+:LOGBOOK:
+CLOCK: [2023-06-19 Mon 21:32]--[2023-06-19 Mon 21:57] =>  0:25
+:END:
+
+一応ビルドはしているけど導線がわかりづらい。
+
+今の問題点。
+
+- 一覧表示しづらい(エディタからも)
+  - 別にできない
+  - タイトルが日本語で出ない
+  - 後で見やすくしないと、書き終わらない
+
+mdbookみたいな感じにしたい。
+** DONE denote一覧を出力する
+CLOSED: [2023-10-08 Sun 10:18]
+:LOGBOOK:
+CLOCK: [2023-10-07 Sat 23:38]--[2023-10-08 Sun 00:03] =>  0:25
+CLOCK: [2023-10-07 Sat 22:28]--[2023-10-07 Sat 23:26] =>  0:58
+CLOCK: [2023-10-07 Sat 21:29]--[2023-10-07 Sat 21:54] =>  0:25
+CLOCK: [2023-10-07 Sat 21:02]--[2023-10-07 Sat 21:27] =>  0:25
+CLOCK: [2023-10-07 Sat 20:36]--[2023-10-07 Sat 21:01] =>  0:25
+CLOCK: [2023-10-07 Sat 23:00]--[2023-10-07 Sat 23:25] =>  0:25
+:END:
+
+CIでdynamic blockを評価できない。空白になってしまう。
+
+#+begin_quote
+Error during update of dynamic block
+#+end_quote
+
+requireしたらできるようになった。どうも[[id:1658782a-d331-464b-9fd7-1f8233b8b7f8][Docker]]イメージをいじるとき、直近の変更が反映されてないように見える。
+
+** DONE denoteのテンプレートを作成する
+CLOSED: [2023-10-07 Sat 20:35]
+:LOGBOOK:
+CLOCK: [2023-07-16 Sun 11:44]--[2023-07-16 Sun 12:09] =>  0:25
+CLOCK: [2023-07-16 Sun 11:19]--[2023-07-16 Sun 11:44] =>  0:25
+CLOCK: [2023-07-16 Sun 01:21]--[2023-07-16 Sun 01:46] =>  0:25
+:END:
+
+[[id:ec870135-b092-4635-8f8e-74a5411bb779][RFC]]風のテンプレートを作成する。スコープを明確にする。
+** DONE denoteページでdenoteリンクが機能しない
+CLOSED: [2023-10-09 Mon 17:37]
+denoteディレクトリをカレントディレクトリに指定したら直った。
+
+エクスポートした後、nilになっている。トップからはリンクが機能しているので、階層が違うので問題のようだ。
+** DONE 量が見えるようにする
+CLOSED: [2024-02-06 Tue 09:40]
+- 数値を出す
+  - PDFのページ数を出す
+  - 文字数・行数を表示する
+  - 換算する
+- 表示
+  - 記号
+  - 図
+** DONE バージョン表示する
+CLOSED: [2024-02-17 Sat 22:17]
+:LOGBOOK:
+CLOCK: [2024-02-06 Tue 22:22]--[2024-02-06 Tue 22:47] =>  0:25
+CLOCK: [2024-02-06 Tue 21:16]--[2024-02-06 Tue 21:41] =>  0:25
+:END:
+CIでの挙動が違うのを調べる。
+** CLOSE コミットグラフをd3.jsで書き直す
+CLOSED: [2024-02-17 Sat 22:16]
+GNU Plotで描画していてよくわからない、かつださいので変える。
+
+が、jsにするとデータが多いと重くなりそうなので、前もって画像を生成しておくでいいか。
+* Footnotes
+[fn:1]
+1. org-roamが各orgファイルを解釈して、sqliteデータベースを作成する。([[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]])
+2. 出力したsqliteデータベースのノード・エッジ情報をjsonに加工する。([[id:a6c9c9ad-d9b1-4e13-8992-75d8590e464c][Python]])
+3. d3.jsにデータを入れて、無向グラフを描画する。([[id:a6980e15-ecee-466e-9ea7-2c0210243c0d][JavaScript]])
+[fn:2] Gitリポジトリをコミットごとに調査するスクリプトでデータ取得。GNU Plotでグラフ画像を描画している。
