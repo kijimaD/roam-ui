@@ -1,0 +1,82 @@
+:PROPERTIES:
+:ID:       007116d4-5023-4070-95ee-0a463b4bd983
+:END:
+#+title: Inbox
+* 概要
+とりあえず入れておくページ。
+* Memo
+* Tasks
+* Reference
+* Inbox
+** [[https://dl.ndl.go.jp/pid/1186448/1/3][阿久根町郷土誌 - NDL Digital Collections]]
+公開されている郷土史。
+** [[https://dl.ndl.go.jp/][NDL Digital Collections]]
+~国立国会図書館~ デジタルコレクション。
+** [[https://www.wul.waseda.ac.jp/kotenseki/html/ru11/ru11_00041/index.html][大日本国細図. 上,下 / 玄〃堂緑山 著]]
+↓薩摩の地図。
+[[https://archive.wul.waseda.ac.jp/kosho/ru11/ru11_00041/ru11_00041_0002/ru11_00041_0002_p0035.jpg][ru11_00041_0002_p0035.jpg (2592×1728)]]
+** [[https://adeac.jp/iwasebunko/viewer/mp01968400/902-115-00-46][〈大日本管轄分地図〉鹿児島県管内全図]]
+明示27年の地図。
+** [[https://websv.aichi-pref-library.jp/wahon/detail/208.html][国郡全図（こくぐんぜんず） - 貴重和本デジタルライブラリー]]
+全国地図。
+** [[https://speakerdeck.com/aarzilli/internal-architecture-of-delve][Internal Architecture of Delve - Speaker Deck]]
+:LOGBOOK:
+CLOCK: [2024-03-24 Sun 22:51]--[2024-03-24 Sun 23:16] =>  0:25
+:END:
+GoのデバッガDelveの解説。
+** [[https://future-architect.github.io/articles/20240307a/][Goリリースノートから技術ブログを書く流れ基礎 | フューチャー技術ブログ]]
+読み方、書き方。
+** [[https://open.talentio.com/r/1/c/future/pages/77456][【Core Technology Group】ソースコード解析エンジニア / フューチャー株式会社]]
+こんな職があるのか。
+** [[https://speakerdeck.com/sat/linux-sched-history][linux-sched-history.pdf - Speaker Deck]]
+Linuxのプロセススケジューラの歴史。
+** [[https://speakerdeck.com/sat/shi-siteli-jie-linuxfalsepurosesusukeziyurafalsesikumi][[試して理解] Linuxのプロセススケジューラのしくみ - Speaker Deck]]
+仕組み。
+** [[https://hrmos.co/pages/cyberagent-group/jobs/0000694?ref=site.developerproductivity.dev][Developer Productivity Engineer (DPE) | サイバーエージェントグループ]]
+開発者生産性の部署。おもしろそう。
+** [[https://open.talentio.com/r/1/c/preferred/pages/88324][Compiler Engineer / コンパイラエンジニア / 株式会社Preferred Networks]]
+すご。
+** [[https://open.talentio.com/r/1/c/preferred/pages/88327][Engineer, Storage / ストレージエンジニア / 株式会社Preferred Networks]]
+ストレージ専門職。
+** [[https://www.valinux.co.jp/][VA Linux Systems Japan株式会社]]
+Linuxの会社。
+** [[https://operating-system-in-1000-lines.vercel.app/ja/welcome][はじめに - Writing an OS in 1,000 Lines]]
+OSを作る本。
+
+- RISC-Vは仕様がシンプルで初心者にやさしい
+- QEMU vietマシン。仮想的なコンピュータでエミュレートしやすい
+- アセンブリを手っ取り早く学ぶ方法は「C言語のコードがどのようなアセンブリに変わるのか観察する」こと
+- Compiler Explorerが手軽。RISC-V rv32gc clang (trunk)を選択する
+** [[https://www.youtube.com/watch?v=dPEsTeL2F98][45分でゼロから作る！OS自作ライブコーディング 2023-7-29 C-3 - YouTube]]
+:LOGBOOK:
+CLOCK: [2024-03-24 Sun 10:36]--[2024-03-24 Sun 11:02] =>  0:26
+CLOCK: [2024-03-24 Sun 01:07]--[2024-03-24 Sun 01:33] =>  0:26
+:END:
+とりあえず自作OSの雰囲気を掴む動画。
+** [[https://github.com/msyksphinz-self/xv6_translate][msyksphinz-self/xv6_translate: translation of XV6]]
+XV6の翻訳。
+** [[https://www.lambdanote.com/collections/frontpage/products/cpu-ebook][プログラマーのためのCPU入門 ― CPUは如何にしてソフトウェアを高速に実行するか（電子書籍のみ） – 技術書出版と販売のラムダノート]]
+CPU性能の本。
+** [[https://ja.wikipedia.org/wiki/%E3%83%8F%E3%82%A4%E3%83%AB%E3%83%96%E3%83%AD%E3%83%B3%E3%81%AE%E6%80%AA%E4%BA%BA][ハイルブロンの怪人 - Wikipedia]]
+DNA汚染で起きた架空の大犯罪者。
+** [[https://www.portal.e2r.jp/fixurl/nintendo_career_job/id/4/2?ki=job00302][キャリア採用：募集要項｜採用情報｜任天堂]]
+[[id:a15d346a-f82e-4796-a78b-85a8d227f0ef][Windows]]が多そうなのは懸念か。
+
+- ゲーム制作用ミドルウェアの開発
+- ゲームエンジンの開発 (NintendoWare Bezel Engine)
+- グラフィックスミドルウェア、ファームウェア、SDKの開発
+- オーディオミドルウェア、ファームウェア、SDKの開発
+** [[https://www.openapis.org/blog/2021/02/16/migrating-from-openapi-3-0-to-3-1-0][Migrating from OpenAPI 3.0 to 3.1.0 - OpenAPI Initiative]]
+3.1.0の破壊的変更。
+** [[https://ja.wikipedia.org/wiki/%E8%A1%97%E7%81%AF%E3%81%AE%E4%B8%8B%E3%81%A7%E9%8D%B5%E3%82%92%E6%8E%A2%E3%81%99][街灯の下で鍵を探す - Wikipedia]]
+的確なたとえ。
+** [[https://www.oreilly.co.jp/blog/2014/11/file-lock-and-new-ofd-lock.html][O'Reilly Japan Blog - ファイルロックと新OFDロック]]
+ファイルロックの解説記事。
+** [[https://ja.wikipedia.org/wiki/%E7%B5%82%E4%BA%86%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9][終了ステータス - Wikipedia]]
+終了ステータス。
+** [[https://qiita.com/hgsgtk/items/363c02064d25e73b03a4][[Go] constant x.x truncated to integerはなぜおきるのか #Go - Qiita]]
+小数まわりの解説。
+** [[https://www.ardanlabs.com/blog/2018/12/garbage-collection-in-go-part1-semantics.html][Garbage Collection In Go : Part I - Semantics]]
+Goのガベージコレクションの解説記事。
+** [[https://ja.wikipedia.org/wiki/%E9%81%85%E5%88%BB%E3%81%99%E3%82%8B%E9%A3%9F%E3%83%91%E3%83%B3%E5%B0%91%E5%A5%B3][遅刻する食パン少女 - Wikipedia]]
+明確な発祥はわかっていない。

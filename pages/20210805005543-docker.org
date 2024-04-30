@@ -1,0 +1,1310 @@
+:PROPERTIES:
+:ID:       1658782a-d331-464b-9fd7-1f8233b8b7f8
+:header-args+: :wrap :results raw
+:END:
+#+title: Docker
+
+* 概要
+Dockerはパフォーマンスに優れた仮想環境を作るプログラム。
+得られる可搬性によって、作成したイメージを開発における各ステージ(テスト、ビルド、リリース…)で適用できるようになる。
+その意味で[[id:eaf6ed04-7927-4a16-ba94-fbb9f6e76166][CI]], [[id:2c4cb3a7-7a8a-4a3b-88c2-2c5e69515764][CD]]の基礎的な技術となっている。
+* Memo
+** バインドマウント先を削除した場合の挙動
+:LOGBOOK:
+CLOCK: [2023-07-05 Wed 23:19]--[2023-07-05 Wed 23:44] =>  0:25
+CLOCK: [2023-07-05 Wed 22:50]--[2023-07-05 Wed 23:15] =>  0:25
+:END:
+バインドマウントしているディレクトリをまるごと削除すると、後からそこにディレクトリをおいても中身がバインドされないことに気づいた。
+
+#+caption: ファイル構成。lsするとaaaとbbbだけが見える状態
+#+begin_src
+- ワーキングディレクトリ
+  - aaa(ディレクトリ)
+    - test1(ファイル)
+    - test2(ファイル)
+  - bbb(ディレクトリ)
+    - test1(ファイル)
+    - test2(ファイル)
+#+end_src
+
+#+caption: 検証用のコンテナを起動する
+#+begin_src shell
+docker run -d -it --name devtest --mount type=bind,source="$(pwd)"/aaa,target=/aaa nginx:latest
+#+end_src
+
+#+caption: 検証方法
+#+begin_src shell
+  docker inspect devtest
+#+end_src
+
+#+caption: コンテナに入って見えることを確認する
+#+begin_src shell
+  $ docker exec -it devtest /bin/sh
+
+  > cd /app
+  > ls
+test1 test2
+#+end_src
+
+#+caption: バインドマウントしているディレクトリをホストマシンから削除する
+#+begin_src shell
+  $ rm -rf /tmp/aaa
+#+end_src
+
+#+caption: ホストマシンから消したので、コンテナからも見えない
+#+begin_src shell
+  $ docker exec -it devtest /bin/sh
+
+  > cd /app
+  > ls
+(何も出ない)
+#+end_src
+
+#+caption: 削除したディレクトリと中身を復活させる
+#+begin_src shell
+  $ cp -r /tmp/bbb /tmp/aaa
+#+end_src
+
+#+caption: ホストマシンには復活しているが、コンテナ内には戻らない
+#+begin_src shell
+  $ docker exec -it devtest /bin/sh
+
+  > cd /ap
+  > ls
+(何も出ない)
+#+end_src
+
+#+caption: inspect結果は削除前と変わらない
+#+begin_src shell
+  docker inspect devtest
+#+end_src
+
+-[[https://github.com/moby/moby/issues/15793#issuecomment-135411504][ File mount does not update with changes from host · Issue #15793 · moby/moby]]
+
+バインドマウントはinodeで一致しているかで同期を管理しているという。新しく作る場合はinodeが変わるので同期されなくなる。
+
+- mvだとinodeが変わらない。のでバインドマウントをし続けられる。そのシェルセッションで何もしていなくても、別で名前を変えても追従し、ワーキングディレクトリは変わることがある
+- cpだとinodeが変わる。のでバインドマウントの同期が切れ、同じ名前のディレクトリを配置しても同期はされない
+
+~docker-compose restart~ するとまたバインドマウントされるようになった。
+
+** サービス名をつけると管理が便利
+サービス名をつけて起動すると、名前を指定して止めることもできるようになる。
+
+#+caption: サービスに名前をつけて起動する
+#+begin_src shell
+docker run -d -p 80:80 --name webserver nginx
+#+end_src
+
+#+caption: 名前を指定して止める
+#+begin_src shell
+docker stop webserver
+#+end_src
+
+** Docker本体のビルド方法
+
+- [[https://github.com/moby/moby][moby/moby: Moby Project]]
+- 手元にcloneしている前提
+
+#+caption: 生成
+#+begin_src shell
+  sudo make build # environment
+  sudo make binary # binary
+  sudo chown -R $USER:$USER . # なくてもいい
+#+end_src
+
+すると、bundles化に実行ファイルが生成される。あとはビルドしたものでデーモンを起動する。
+
+#+begin_src shell
+  sudo service docker stop # 現状デーモン停止
+  sudo ./bundles/binary-daemon/dockerd
+#+end_src
+
+** docker buildのデバッグ
+
+buildでどこまで成功しているかを確かめるために、コマンドを仕込みたいことがある。デフォルトでは出力されないので、オプションが必要。
+
+#+caption: --progress plainを使う。キャッシュがあると実行されない
+#+begin_src shell
+docker build . --progress plain --no-cache -t test
+#+end_src
+
+** ログを追従させる
+#+begin_src shell
+docker-compose logs -f
+#+end_src
+
+-dオプションはログが出ないので使ってこなかった。これによって卒業できる。
+** ボリュームとマウントの違い
+- ボリューム :: データを永続化できる場所のこと
+- マウント :: コンテナにホストのディレクトリをマウントすること
+
+ボリュームはマウントしないと、使えるようにはならない。docker-composeのvolumesではボリュームといいつつ書き方によってマウントしてくれる。
+
+- [[https://qiita.com/gounx2/items/23b0dc8b8b95cc629f32][Docker、ボリューム(Volume)について真面目に調べた - Qiita]]
+** コンテナからホストのポートにアクセスできるようにする
+docker-composeでコンテナ側からホストのポートへアクセスできるようにする方法。
+
+#+begin_src yaml
+    container:
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+#+end_src
+
+あとはコンテナ内のコード側で、 ~host.docker.internal:{ホストのポート番号}~ とすることでホストのポートへアクセスできるようになる。
+
+** dockerネットワークの仕組み                                    :DontKnow:
+:LOGBOOK:
+CLOCK: [2022-10-16 Sun 15:38]--[2022-10-16 Sun 16:03] =>  0:25
+:END:
+- [[https://www.youtube.com/watch?v=bKFMS5C4CG0][Docker networking is CRAZY!! (you NEED to learn it) - YouTube]]
+** Got permission deniedエラー
+dockerがsudo権限以外で実行できなくなるときがある。
+
+#+begin_quote
+  $ docker ps
+  Got permission denied while trying to connect to the Docker daemon socket
+#+end_quote
+
+これはログイン中のユーザがdocker権限を持っていないから。
+
+#+caption: ログイン中のユーザにdocker権限をセットする
+#+begin_src shell
+sudo gpasswd -a $(whoami) docker
+id $(whoami) # dockerが追加されたのを確認する
+#+end_src
+
+コマンドを実行したあと、ログアウトする。sudoなしでdockerコマンドを打てるようになっている。
+
+- [[https://tech.librastudio.co.jp/entry/index.php/2018/07/14/post-1924/][dockerコマンド実行時の「Got permission denied while trying to connect to the Docker daemon socket」 - Libra Studio Log]]
+
+** [[id:2d35ac9e-554a-4142-bba7-3c614cbfe4c4][GitHub Actions]]でビルドする
+[[id:eaf6ed04-7927-4a16-ba94-fbb9f6e76166][CI]]によるコンテナビルドには、--cache-from を使って、レジストリに送信したイメージから各ステージのキャッシュを取得していく方法と、CIのキャッシュ機能を使う方法の2つがある。
+
+レジストリからキャッシュを取る方法には弱点がある。
+
+- キャッシュが登録イメージの1つしかない。たとえば異なるブランチでキャッシュが更新されると、キャッシュが失われる
+- --mount=type=...のcacheが、pushイメージには含まれない
+- ステージごとにキャッシュ通信(取得+送信)をするが、オーバーヘッドが大きい
+- イメージに含めることができるキャッシュ(inline cache)には、minモードしか適用できない。つまりキャッシュに制限がある[[https://github.com/moby/buildkit#--export-cache-options][moby/buildkit: concurrent, cache-efficient, and Dockerfile-agnostic builder toolkit]]
+
+のため、CIのキャッシュ機能を使うのが現実的か。複数のキャッシュ…ブランチごと、Gemfileのハッシュ値ごとでハッシュを保持できるためキャッシュがヒットしやすい。キャッシュはひとまとめで保存され、レジストリへの送信イメージは利用イメージだけになる。
+** RUN --mount=type=...オプション
+ビルド時にだけアクセスできる、cacheマウントを利用できる。マウントと言うが、ホストマシンとは関係ない。マウントディレクトリはビルド後削除されるため、イメージサイズにも優しい。
+https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/syntax.md
+
+#+begin_src
+RUN --mount=type=cache,target=/root/.cache/go-build go build
+#+end_src
+
+たとえばpackage.jsonに変更があったときも途中から再開できる。ビルドキャッシュがヒットする/しないのゼロイチでなくなる。
+** rake assets:precompile高速化
+- public/assets
+- tmp/cache/assets
+
+をキャッシュしておくことで高速化できる。
+** ビルドキャッシュをレジストリに保存し、CI環境でキャッシュを使ってビルドする
+レジストリのキャッシュを利用してビルドできる。これによって、キャッシュがローカル環境に保持されない[[id:eaf6ed04-7927-4a16-ba94-fbb9f6e76166][CI]]環境などでもキャッシュを利用して高速にビルドできる。
+
+ポイントは--build-argと--cache-from。
+--build-argでメタ情報を含めてビルドする。このイメージをpushしておくことで、次回からキャッシュを利用できる。
+--cache-fromによってレジストリにある指定イメージからキャッシュを取得してビルドする。
+
+#+caption: --cache-from と --build-arg BUILDKIT_INLINE_CACHE=1
+#+begin_src shell
+  docker build --target build -t ghcr.io/kijimad/roam-build:master --cache-from ghcr.io/kijimad/roam-build:master --build-arg BUILDKIT_INLINE_CACHE=1 .
+  docker push ghcr.io/kijimad/roam-build:master
+#+end_src
+** 本番用yarn buildの例
+本番用にコンパクトにビルドする場合の例。
+node_modulesはいらなくて、ビルド成果物だけあればよい。
+ステージを分けることで、意味が明確になり、サイズも小さくできる(高速化)。
+
+#+begin_src dockerfile
+  COPY package.json $HOME/
+  COPY front/ $HOME/front/ # front にはビルド対象のjs, tsファイルが配置されている想定。サブモジュールを導入している場合、package.jsonは階層上に複数あるため、COPYしておく必要がある
+
+  RUN npm install
+
+  COPY babel.config.js $HOME/
+  COPY tsconfig.json $HOME/
+  COPY webpack.config.js $HOME/
+
+  RUN yarn run build
+#+end_src
+
+#+caption: ビルド成果物だけを配置
+#+begin_src dockerfile
+COPY --from=rails-yarn-build $HOME/public/webpack/ $HOME/public/webpack/
+#+end_src
+** Rails開発のMy docker-compose
+[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]開発をすべてdockerでやる想定。
+一発ですべてが準備され、クリーンな環境を構築する。bundle install やyarn install など、立ち上げ続ける前提でないコマンドも含まれる。そのコマンドだけ再度実行したいときは ~docker-compose restart bundle~ などとする。
+
+元ネタ: foremのdocker-compose.yml。
+- https://github.com/forem/forem
+
+↓あとはdockerizeを設定すれば完璧か。
+#+caption: docker-compose.yml
+#+begin_src yaml
+  # 共通のimage名: app
+  # imageのワーキングディレクトリ: /app
+  version: '3.7'
+
+  services:
+    mysql:
+      image: mysql:latest
+      ports:
+        - '${MYSQL_PORT:-3306}:3306'
+      environment:
+        # DBクライアントでの接続時に必要なので明示する
+        MYSQL_DATABASE: develop
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_USER: user
+        MYSQL_PASSWORD: password
+        MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      volumes:
+        - 'mysql-data:/var/lib/mysql'
+
+    redis:
+      image: redis:latest
+      ports:
+        - '${REDIS_PORT:-6379}:6379'
+
+    memcached:
+      image: memcached:latest
+      ports:
+        - '${MEMCACHED_PORT:-11212}:11211'
+
+    rails:
+      image: app
+      environment:
+        RAILS_ENV: development
+        REDIS_URL: 'redis://redis:6379'
+        MEMCACHED: 'memcached:11211'
+        DATABASE_URL: 'mysql2://root@mysql:3306'
+      depends_on:
+        - mysql
+        - redis
+        - memcached
+        - bundle
+        - yarn
+        - seed
+      command: bash -c 'bundle exec rails s -b 0.0.0.0'
+      volumes:
+        - .:/app:delegated # delegatedで高速化
+        - gem_data:/usr/local/bundle:delegated # package系は永続化して最初からinstallにならないようにする
+        - node_modules:/app/node_modules:delegated
+      ports:
+        - '3000:3000'
+
+    webpack:
+      image: app
+      environment:
+        NODE_ENV: development
+        WEBPACKER_DEV_SERVER_HOST: 0.0.0.0
+      command: bash -c 'yarn watch'
+      volumes:
+        - .:/app:delegated
+        - node_modules:/app/node_modules:delegated
+      ports:
+        - 8080:8080
+
+    sidekiq:
+      image: app
+      command: bash -c 'bundle exec sidekiq -C config/sidekiq.yml'
+      environment:
+        REDIS_URL: 'redis://redis:6379'
+        DATABASE_URL: 'mysql2://root@mysql:3306'
+      volumes:
+        - .:/app:delegated
+        - gem_data:/usr/local/bundle:delegated
+      links:
+        - mysql
+        - redis
+
+    bundle:
+      image: app
+      environment:
+        RAILS_ENV: development
+      volumes:
+        - .:/app:delegated
+        - gem_data:/usr/local/bundle:delegated
+      command: bash -c "bundle install --jobs 8" # マシンがいくつ並列処理できるかは`$ getconf _NPROCESSORS_ONLN` で調べられる
+
+    yarn:
+      image: app
+      environment:
+        NODE_ENV: development
+      volumes:
+        - .:/app:delegated
+        - node_modules:/app/node_modules:delegated
+      command: bash -c "yarn install"
+
+    seed:
+      image: app
+      environment:
+        DATABASE_URL: 'mysql2://root@mysql:3306'
+      volumes:
+        - .:/app:delegated
+        - gem_data:/usr/local/bundle:delegated
+      command: bash -c "rake db:seed_fu"
+
+  volumes:
+    gem_data:
+    node_modules:
+    mysql_data:
+#+end_src
+
+#+caption: entrypoint.sh
+#+begin_src shell
+  #! /bin/bash
+
+  set -e
+
+  if [ -f tmp/pids/server.pid ]; then
+    rm -f tmp/pids/server.pid
+  fi
+
+  cat << EOF
+
+    ░░▄████████████▄▐█▄▄▄▄█▌░
+    ░░████████████████▌▀▀██▀▀░░
+    ░░████▄████████████▄▄█▌░░░░
+    ░░▄▄▄▄▄██████████████▀ ░░░░
+
+  EOF
+
+  exec "$@"
+
+#+end_src
+** docker service再起動
+おかしくなったときの再起動。
+#+begin_src shell
+sudo service docker restart
+#+end_src
+** コンテナ掃除関係
+[[https://qiita.com/shisama/items/48e2eaf1dc356568b0d7][コマンドでDockerコンテナを停止・削除、イメージの削除をする - Qiita]]
+
+#+begin_src shell
+docker stop $(docker ps -q) # 全コンテナ停止
+docker rm $(docker ps -q -a) # 全コンテナ削除
+docker rmi $(docker images -q) # 全イメージ削除:
+#+end_src
+** ディスク使用率がとんでもないことになっていたとき
+ディスク使用率がほぼ100％になっていた。占めているほとんどはDocker関係のようだった。
+イメージは削除するようにしてたが、ほかにも色々あるよう。
+
+専用のページがある。
+https://docs.docker.com/config/pruning/
+
+非常に多くのゴミがありそうだったので、多少再pullに時間がかかることを許容してすべて削除することにした。
+#+caption: 手っ取り早くすべて消す。警告が出る
+#+begin_src shell
+docker system prune
+#+end_src
+
+ゴリゴリbuildして試しているときは、気をつけたほうがよさそう。
+
+キャッシュ削除だけ行う。この場合が多そう。
+#+begin_src shell
+docker builder prune
+#+end_src
+** entrypoint.sh
+公式Docker Imageでよく用いられる、コンテナ起動時に実行するスクリプト。
+公式のイメージのままで、初回起動時に実行したいフックとして記述できる。
+
+例(Dockerfile): [[https://github.com/tzumby/rails-on-kubernetes/blob/master/Dockerfile][rails-on-kubernetes/Dockerfile at master · tzumby/rails-on-kubernetes]]
+#+caption: Dockerfileの末尾で取り込む
+#+begin_src shell
+ADD . /myapp
+
+COPY docker-entrypoint.sh /usr/local/bin
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+#+end_src
+
+例(entrypoint.sh): [[https://github.com/tzumby/rails-on-kubernetes/blob/master/docker-entrypoint.sh][rails-on-kubernetes/docker-entrypoint.sh at master · tzumby/rails-on-kubernetes]]
+#+caption: entrypoint.sh $@は引数
+#+begin_src shell
+#!/bin/sh
+
+set -e
+
+if [ -f tmp/pids/server.pid ]; then
+  rm tmp/pids/server.pid
+fi
+
+echo "Waiting for Postgres to start..."
+while ! nc -z postgres 5432; do sleep 0.1; done
+echo "Postgres is up"
+
+echo "Waiting for Redis to start..."
+while ! nc -z redis 6379; do sleep 0.1; done
+echo "Redis is up - execuring command"
+
+exec bundle exec "$@"
+#+end_src
+** docker-composeとdocker
+docker-composeは自動でタグ名をつけてくれたり、マウントしてくれたり、dockerコマンドよりややこしくなりにくい。
+単に開発環境として使っているだけでは、ほとんどdocker-composeで事足りる。
+が、docker-composeへ依存しているということで、docker-compose関係ない別の文脈で使おうとすると途端に動かなくなる。本質的にdocker-composeはコンテナ間の関係性を記述しているだけで、コンテナ自体を表現しているわけではない。
+
+本当にdockerコンテナとしての正しい使い方をしているかテストするには、コンテナを複数のデプロイやCIで利用してみるのがよい。同じ流れで簡単にできたのなら正しい。簡単にできないなら何かが間違っている。
+** よく使うdockerオプション
+#+caption: 例
+#+begin_src shell
+docker run --rm -v "$PWD/":/roam -w /roam ghcr.io/kijimad/roam:master sh deploy.sh
+#+end_src
+
+~--rm~ : コマンド実行後にコンテナを削除する
+~-v~: ホストマシンにマウントする。左がホストマシン、右がコンテナ内。
+
+#+caption: -itの意味: 対話モード
+#+begin_src shell
+docker run --rm -it ghcr.io/kijimad/roam:master
+#+end_src
+-it はttyオプション。インタラクティブなシェルを作成する。つけないと、一瞬で消える。
+** buildkitをオンにする
+環境変数をオンにすることで、新しい機能が使えるようになる。
+#+caption: shell
+#+begin_src shell
+  export COMPOSE_DOCKER_CLI_BUILD=1
+  export DOCKER_BUILDKIT=1
+  docker build .
+#+end_src
+** docker-composeでマウントしたときにnode_modulesが消える問題
+1. npm install するコンテナを作成
+2. コンテナをマウント
+3. ホストマシンにないnode_modulesは消える
+4. エラー
+
+なので、node_modulesもマウントする。
+
+#+caption: docker-compose.yml
+#+begin_export yaml
+volumes:
+  - .:/contaier # ホストマシンのファイルをすべてマウント。ホストマシンにないのは消える
+  - /container/node_modules
+#+end_export
+
+#+caption: dockerコマンドの場合。-v を2つで指定する
+#+begin_src shell
+docker run --rm -v "$PWD":/roam -v /roam/node_modules ghcr.io/kijimad/roam_lint:master make textlint
+#+end_src
+
+https://rara-world.com/dockerfile-node-modules/ に書いてあった。
+** dockleでセキュリティチェック
+dockleというツールでイメージをチェックできる。
+[[https://github.com/goodwithtech/dockle][goodwithtech/dockle: Container Image Linter for Security, Helping build the Best-Practice Docker Image, Easy to start]]
+
+自前のイメージにかけるとたくさん見つかった。
+#+caption: 実行してみた
+#+begin_src shell
+$ dockle ghcr.io/kijimad/roam:4f3296b
+FATAL   - DKL-DI-0001: Avoid sudo command
+        ,* Avoid sudo in container : /bin/sh -c yum -y update &&     yum -y install         yum-utils
+      gcc         gcc-c++         make         openssl-devel         openssh-server         readline
+nuplot
+WARN    - CIS-DI-0001: Create a user for the container
+        ,* Last user should not be root
+INFO    - CIS-DI-0005: Enable Content trust for Docker
+        ,* export DOCKER_CONTENT_TRUST=1 before docker pull/build
+INFO    - CIS-DI-0006: Add HEALTHCHECK instruction to the container image
+        ,* not found HEALTHCHECK statement
+INFO    - CIS-DI-0008: Confirm safety of setuid/setgid files
+        ,* setgid file: g--x--x--x usr/libexec/openssh/ssh-keysign
+        ,* setuid file: urwxr-xr-x usr/sbin/pam_timestamp_check
+        ,* setuid file: urwxr-xr-x usr/bin/mount
+        ,* setgid file: grwx--x--x usr/libexec/utempter/utempter
+        ,* setuid file: urwxr-xr-x usr/bin/chage
+        ,* setuid file: urwxr-xr-x usr/bin/su
+        ,* setuid file: urwxr-x--- usr/libexec/dbus-1/dbus-daemon-launch-helper
+        ,* setuid file: urwxr-xr-x usr/sbin/unix_chkpwd
+        ,* setuid file: u--x--x--x usr/bin/sudo
+        ,* setgid file: g--x--x--x usr/bin/ssh-agent
+        ,* setuid file: urwxr-xr-x usr/bin/umount
+        ,* setuid file: urwxr-xr-x usr/bin/gpasswd
+        ,* setuid file: urwxr-xr-x usr/bin/newgrp
+        ,* setgid file: grwxr-xr-x usr/bin/write
+INFO    - DKL-LI-0003: Only put necessary files
+        ,* Suspicious directory : roam/.git
+        ,* Suspicious directory : usr/local/plugins/ruby-build/.git
+        ,* Suspicious directory : usr/local/plugins/ruby-build/test/tmp
+        ,* Suspicious directory : tmp
+        ,* unnecessary file : roam/docker-compose.yml
+        ,* unnecessary file : roam/Dockerfile
+#+end_src
+** pushスクリプト
+[[https://www.amazon.co.jp/dp/B01N0SS6NF/ref=dp-kindle-redirect?_encoding=UTF8&btkr=1][Amazon.co.jp: Deploying Rails with Docker, Kubernetes and ECS (English Edition) eBook : Acuña, Pablo: Foreign Language Books]]に載ってたスクリプト。書いてリポジトリに入れておくとスムーズにビルドやプッシュができる。
+レジストリ・ユーザ名・リポジトリを適宜変える。
+#+begin_src shell
+  #!/bin/sh
+
+  LC=$(git rev-parse --short HEAD)
+  docker build -t ghcr.io/kijimad/webapp:${LC} .
+  docker push ghcr.io/kijimad/webapp:${LC}
+#+end_src
+** 実行後にコンテナ削除
+docker run するとコンテナ内に入れるが、作ったコンテナはそのままになる。
+実行後に削除して欲しい場合は、 ~docker --rm webapp /bin/sh~ などrmオプションを使う。
+** コンテナ間の接続はサービス名を用いる
+コンテナ間の接続をしようとして、このようなエラーが出た。
+#+caption: sidekiq -> redisへ接続したい
+#+begin_quote
+Error connecting to Redis on 127.0.0.1:6379 (Errno::ECONNREFUSED)
+#+end_quote
+
+127.0...とあることから、コンテナ内のアドレスを見に行ってる。
+コンテナ間での通信には、サービス名のアドレスを追加する必要がある。
+
+#+caption: redis://redis:6379/15
+#+begin_export yaml
+  worker:
+    build: .
+    command: bundle exec sidekiq
+    environment:
+      REDIS_URL: redis://redis:6379/15 ＃<---別のredisコンテナへの接続
+    volumes:
+      - .:/app
+    links:
+      - mysql
+      - redis
+#+end_export
+** rootユーザでファイル作成しないようにする
+Dockerコンテナ内でファイルを作成すると、ownerがrootになり編集や削除ができず面倒。
+Dockerの内部ではユーザid(uid)やグループid(gid)がホストと異なる。idがホストマシンと合わないためrootとして実行されたことになる、よう。
+
+安易な解決策としては、権限をホストユーザに変更すれば問題ない。
+とはいえ、コンテナ内のサービスが新しくファイルを作るたび(たとえばマイグレーションファイル生成)に実行するのは面倒。
+[[https://docs.docker.com/samples/rails/][If you are running Docker on Linux, the files rails new created are owned by root.]]
+#+caption: 権限変更
+#+begin_src shell
+  sudo chown -R $USER:$USER .
+#+end_src
+
+解決策としてはいくつか種類があるようなのだが、とりあえずできた。
+サービスのvolumesにユーザ情報をマウントする。:roは読み取り専用(read onlyか)。
+これでidの照合元がホストと同じになる。
+
+#+caption: docker-compose.yml
+#+begin_src yaml
+  volumes:
+    - /etc/passwd:/etc/passwd:ro
+    - /etc/group:/etc/group:ro
+#+end_src
+
+あとはidを環境変数経由で渡せば、コンテナ内でもホストのユーザが実行したことになる。
+#+begin_src shell
+  sudo docker run -u "$(id -u $USER):$(id -g $USER)" rails /bin/sh
+  sudo docker-compose run -u "$(id -u $USER):$(id -g $USER)" rails /bin/sh
+#+end_src
+
+overrideがある場合、このようになる(長すぎ)。
+#+begin_src shell
+sudo docker-compose -f docker-compose.yml -f docker-compose-app.override.yml run -u "$(id -u $USER):$(id -g $USER)" rails /bin/sh
+#+end_src
+
+[[https://blog.amedama.jp/entry/docker-container-host-same-user][Docker コンテナ内で Docker ホストと同じユーザを使う - CUBE SUGAR CONTAINER]]
+** Docker Hub
+Dockerイメージをインターネット上にアップロードできるスペース。
+個別にビルドしなくてよくなるためDocker関連の全工程が高速化する。テスト、ローカル、デプロイ…。
+** マルチステージビルドとは
+サイトをDockerデプロイにしたり、CIをDockerで行うとき。
+複数の環境が関係する場合、マルチステージビルドを行うとキャッシュが効くため高速化できる。
+
+- Linux関連のイメージ
+- [[id:cfd092c4-1bb2-43d3-88b1-9f647809e546][Ruby]]関連のイメージ
+- node関連のイメージ
+- [[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]アプリのイメージ
+
+のように。
+Linux → [[id:cfd092c4-1bb2-43d3-88b1-9f647809e546][Ruby]] + node → [[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]という依存関係になる。
+** Dockerfileは何か
+Dockrfileはイメージを作る。(image build)
+docker-compose upは↑で作られたイメージを元にコンテナを作り起動までする。そのなかアプリケーションを走らせて開発する。
+
+image構築 → コンテナ構築 → コンテナ起動 という流れ。
+
+コンテナの作り方には2種類ある。
+- 自作する必要があるものは↑Dockerfileで作る
+- 既存コンテナ([[id:7dab097c-60ba-43b9-949f-c58bf3151aa8][MySQL]]とか)はイメージをダウンロードする
+** コンテナ内でコマンド実行する
+コンテナ内部で実行したいコマンドがあるときにやりたいこと、たとえば[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]だと、gemfileが新しくなったときにbundle installしたい。
+
+runは新しくコンテナを作成し、内部でコマンドを実行する。サービス名はdocker-compose.ymlから取っている。つまり立ち上がっているコンテナ名は関係ないのに注意。何も指定してない場合、docker-compose.ymlからサービス名を決定する。ほかのファイルの場合には-fオプションが必要。外部で永続化される…volumeが指定されてるような処理(bundle install)とか、データベース関係はいいのだが、その他は永続化されないので注意。
+
+#+caption: run
+#+begin_src shell
+  docker-compose run {サービス名} {shellコマンド}
+#+end_src
+
+execはコンテナを再利用してコマンドを実行する。高速。
+#+caption: exec
+#+begin_src shell
+  docker-compose exec {サービス名} {shellコマンド}
+#+end_src
+** キャッシュを使わずにbuildする
+#+begin_src shell
+  docker-compose build --no-cache
+#+end_src
+** 立ち上げと停止
+#+begin_src shell
+docker-compose up --build -d # コンテナ作成する
+docker-compose down
+#+end_src
+** docker外に公開する
+[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]
+Dockerfileで。
+#+begin_src shell
+  CMD bundle exec rails server -b 0.0.0.0
+#+end_src
+
+などと書いておくと、外部(Docker外)からアクセスできるようになる。-b 0.0.0.0 がないと別のネットワークからアクセスが不可。コンテナを超えると別のネットワーク扱いになるのでこの記述が必要。
+** ポート指定する
+どっちだったか忘れる。
+左が公開、右がコンテナ内。だからブラウザでポート8000アクセスできるようになる。
+#+begin_src shell
+  docker run -p 8000:3000 -it bdd92ace66ec
+#+end_src
+** ログを確認する
+#+begin_src shell
+docker ps -a # id確認
+docker logs 1111... # idを入れる
+#+end_src
+** イメージを削除する
+使ってないイメージを削除する。
+#+begin_src shell
+  docker images prone
+#+end_src
+
+一気に全部削除する。
+#+begin_src shell
+  docker stop $(docker ps -q)
+  docker rm $(docker ps -aq)
+  docker rmi $(docker images -q)
+#+end_src
+** コンテナの大まかな仕組み
+CLOSED: [2022-09-17 Sat 21:55]
+:LOGBOOK:
+CLOCK: [2022-08-07 Sun 12:05]--[2022-08-07 Sun 12:30] =>  0:25
+:END:
+仮想化をどうやっているか、なぜ独立した環境にできるのか知らない。
+
+解説は↓にある。非常にわかりやすい。[[id:7cacbaa3-3995-41cf-8b72-58d6e07468b1][Go]]のミニマル実装もある。
+- [[https://kaminashi-developer.hatenablog.jp/entry/dive-into-swamp-container-scratch][【Go言語】自作コンテナ沼。スクラッチでミニDockerを作ろう - カミナシ エンジニアブログ]]
+
+dockerの構成。
+
+- Docker Host
+  - Docker Daemon
+  - Container
+  - Images
+  - Network
+- Docker client
+  - build, pull, runとか
+
+network, container, image, volumesはCli経由でDocker daemonの機能を呼び出す。
+コンテナを一言で言うと「 システムから分離されたプロセス 」。Linux上でunshareコマンドを打つことにより、最速でコンテナを作成できる。
+
+#+caption: 最低限のコンテナ。この立ち上がったプロセスがコンテナ
+#+begin_src shell
+  $ sudo unshare -u /bin/bash
+  # ユーザがrootになった
+  $ hostname newhost && hostname
+  -> newhost
+  # ホスト名を変更した
+  $ which emacs
+  -> /usr/bin/emacs # unshareしてない状態だとEmacsはguixディレクトリ化に入っているので、確かに環境が別になっている
+#+end_src
+
+コンテナに必要な[[id:7a81eb7c-8e2b-400a-b01a-8fa597ea527a][Linux]]の機能3つ。
+
+- Namespace
+  - プロセスはそれぞれでNamespaceを持っている。unshareはプロセスを分離させNamespaceを作成した
+- Control Group
+  - アプリケーションを特定のリソースセットに制限する。メモリの最大利用数や、プロセス最大実行数を制限できる
+  - ~cat /sys/fs/cgroup/cpuset/cpuset.cpus~
+- File System
+  - 親からマウントされたFile Systemに関するデータのコピーを取得し、親と同じデータ構造へのポインタを取得して変更できるようにする
+  - cat ~/proc/mounts~
+** コンテナからホストにコピーする
+docker-compose cp が使える。dockerコマンドと違って、コンテナIDを指定する必要がない。
+
+コンテナ → ホストでも、ホスト → コンテナでも、入れ替えて使える。当然、コンテナは前もって起動しておく必要がある。
+
+#+caption: docker compose cp [service]:[コピー元path] [コピー先path]
+#+begin_src shell
+docker compose cp doc:/usr/share/nginx/html ./
+#+end_src
+* Tasks
+** TODO [[https://www.youtube.com/watch?v=bKFMS5C4CG0][Docker networking is CRAZY!! (you NEED to learn it) - YouTube]]
+:LOGBOOK:
+CLOCK: [2024-03-02 Sat 15:02]--[2024-03-02 Sat 15:27] =>  0:25
+CLOCK: [2024-03-02 Sat 14:37]--[2024-03-02 Sat 15:02] =>  0:25
+CLOCK: [2024-03-02 Sat 14:12]--[2024-03-02 Sat 14:37] =>  0:25
+CLOCK: [2024-03-02 Sat 12:28]--[2024-03-02 Sat 12:53] =>  0:25
+:END:
+
+動かして学ぶ、Docker networkの解説動画。
+
+#+begin_src shell
+  docker network ls
+#+end_src
+
+#+RESULTS:
+#+begin_results
+NETWORK ID     NAME           DRIVER    SCOPE
+ce33ed323134   bridge         bridge    local
+bf0cec25fb71   docs_default   bridge    local
+13c040755115   host           host      local
+5482a9ce687b   none           null      local
+#+end_results
+
+#+caption: テストのコンテナを起動する
+#+begin_src shell
+  docker run -itd --rm --name test1 busybox
+  docker run -itd --rm --name test2 busybox
+#+end_src
+
+#+RESULTS:
+#+begin_results
+c1df10ea18c045e19832b6e5016f7c0b1b08742f38a6af1ad3222cf255165332
+89e1be2705a7e08e569cbd7a5fb9b51e2ffd9f26e3b3c4be3effbd09d39c7fc6
+#+end_results
+
+↑コマンドではネットワークまわりの設定はないが、自動で追加されている。確認する。
+
+↓ホストマシンから確認する。 ~veth*~ が増えている。
+
+#+begin_src shell
+  ip address show
+#+end_src
+
+#+RESULTS:
+#+begin_results
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: wlp0s20f3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether a0:29:42:f6:35:97 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.0.135/24 brd 192.168.0.255 scope global dynamic noprefixroute wlp0s20f3
+       valid_lft 3956sec preferred_lft 3956sec
+    inet6 240b:10:91c1:d500:a535:6b03:37ab:c2a/64 scope global temporary dynamic
+       valid_lft 597967sec preferred_lft 79426sec
+    inet6 240b:10:91c1:d500:7c43:5116:5189:7920/64 scope global dynamic mngtmpaddr noprefixroute
+       valid_lft 2591770sec preferred_lft 604570sec
+    inet6 fe80::630:a649:296b:62a6/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:92:8f:f5:2c brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:92ff:fe8f:f52c/64 scope link
+       valid_lft forever preferred_lft forever
+4: br-bf0cec25fb71: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default
+    link/ether 02:42:68:39:3c:cb brd ff:ff:ff:ff:ff:ff
+    inet 172.19.0.1/16 brd 172.19.255.255 scope global br-bf0cec25fb71
+       valid_lft forever preferred_lft forever
+1164: vethbd4a2ba@if1163: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master # 👈 docker0 state UP group default
+    link/ether 3e:4a:f3:57:3c:f6 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::3c4a:f3ff:fe57:3cf6/64 scope link
+       valid_lft forever preferred_lft forever
+1166: vethd4e3cec@if1165: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master # 👈 docker0 state UP group default
+    link/ether d2:1c:e5:39:4b:7a brd ff:ff:ff:ff:ff:ff link-netnsid 2
+    inet6 fe80::d01c:e5ff:fe39:4b7a/64 scope link
+       valid_lft forever preferred_lft forever
+#+end_results
+
+#+begin_src shell
+  bridge link
+#+end_src
+
+#+RESULTS:
+#+begin_results
+1164: vethbd4a2ba@if1163: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 master docker0 state forwarding priority 32 cost 2 # 👈 docker0
+1166: vethd4e3cec@if1165: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 master docker0 state forwarding priority 32 cost 2 # 👈 docker0
+#+end_results
+
+ブリッジをさらに詳しく見る。
+
+#+caption: bridgeを見ると起動したものが追加されている
+#+begin_src shell
+  docker inspect bridge
+#+end_src
+
+#+RESULTS:
+#+begin_results
+[
+    {
+        "Name": "bridge",
+        "Id": "ce33ed32313474bcb0aa3f914152fd0c1df57c1e1fadc740a6fd16d6f91d4637",
+        "Created": "2024-02-28T00:10:39.317309307+09:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "89e1be2705a7e08e569cbd7a5fb9b51e2ffd9f26e3b3c4be3effbd09d39c7fc6": {
+                "Name": "test2",
+                "EndpointID": "7464bc9f1771de61da18e637390233e9146e2d8a0fdb7fd2822c4358534b8a96",
+                "MacAddress": "02:42:ac:11:00:04",
+                "IPv4Address": "172.17.0.4/16", # 👈
+                "IPv6Address": ""
+            },
+            "c1df10ea18c045e19832b6e5016f7c0b1b08742f38a6af1ad3222cf255165332": {
+                "Name": "test1",
+                "EndpointID": "87edd7c730152b05cc16931305b5178a1a26d6649c462d405b700a4071afbe38",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16", # 👈
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+#+end_results
+
+↑ ~docker0~ ネットワーク内に追加されている。
+
+ホストネットワークで起動する。
+
+#+begin_src shell
+  docker run -itd --rm --network host --name test3 nginx
+#+end_src
+
+#+RESULTS:
+#+begin_results
+0574b61623240c3ce524c44bba37e85386a2052c64811a06bd96dd80ea9cc98a
+#+end_results
+
+ポートを公開することなく、ホストマシンからアクセスできる。ネットワークは隔離されない。
+
+#+begin_src shell
+  curl -I http://localhost
+  curl -I http://172.17.0.1
+#+end_src
+
+#+RESULTS:
+#+begin_results
+HTTP/1.1 200 OK
+Server: nginx/1.25.4
+Date: Sat, 02 Mar 2024 04:55:15 GMT
+Content-Type: text/html
+Content-Length: 615
+Last-Modified: Wed, 14 Feb 2024 16:03:00 GMT
+Connection: keep-alive
+ETag: "65cce434-267"
+Accept-Ranges: bytes
+
+HTTP/1.1 200 OK
+Server: nginx/1.25.4
+Date: Sat, 02 Mar 2024 04:55:15 GMT
+Content-Type: text/html
+Content-Length: 615
+Last-Modified: Wed, 14 Feb 2024 16:03:00 GMT
+Connection: keep-alive
+ETag: "65cce434-267"
+Accept-Ranges: bytes
+
+#+end_results
+
+** dockerドキュメントのタイポ修正
+- [[https://docs.docker.jp/index.html][Docker ドキュメント日本語化プロジェクト — Docker-docs-ja 24.0 ドキュメント]]
+- 特定のユーザに割り当てられたほ場的なグループと共に実行されます
+- 議事 tty（pseudo-tty）の割り当て
+
+** TODO 誤字修正
+- https://github.com/zembutsu/docs.docker.jp/blob/main/compose/reference/restart.rst
+** TODO [[https://github.com/gitpod-io/workspace-images][gitpod-io/workspace-images: Ready to use docker images for Gitpod workspaces]]
+コンテナまわりが参考になる。
+** TODO [[https://tatsu-zine.com/books/container-security][コンテナセキュリティ コンテナ化されたアプリケーションを保護する要素技術【委託】 - 達人出版会]]
+コンテナの本。
+** TODO [[https://github.com/compose-spec/compose-go/pull/416][introduce require to load sub-compose projects as dependencies by ndeloof · Pull Request #416 · compose-spec/compose-go]]
+気になる機能追加。-fオプションの上書きは、わかりづらい。
+** TODO [[https://knowledge.sakura.ad.jp/23899/][Docker Compose入門 (3) ～ネットワークの理解を深める～ | さくらのナレッジ]]
+docker networkの解説。
+** TODO [[https://qiita.com/Surgo/items/709a07d68c6eafbad267][Docker と LXC - Qiita]]
+コンテナのLXCとはなにかを解説。
+** TODO [[https://kayanaka.hatenablog.com/entry/2019/10/31/233902][Dockerコンテナの/var/lib/docker/overlay配下の容量が大きくなって起動できない事象に遭遇したので周辺知識を調べた。 - 蚊帳の中の日記]]
+overlayのわかりやすい説明。事象を理解するためには、仕組みを理解していなければいけない。
+** TODO docker ignoreの仕組み                                     :DontKnow:
+どうやってignoreしているのだろうか。
+
+#+begin_src git-permalink
+https://github.com/kd-collective/buildkit/blob/37d54ebc592a54db8764911eb320d02d2260c5e6/frontend/dockerfile/dockerignore/dockerignore.go#L13
+#+end_src
+
+#+RESULTS:
+#+begin_results
+// ReadAll reads a .dockerignore file and returns the list of file patterns
+#+end_results
+
+- ファイルを読み込み、パスのスライスを出しているだけ
+
+** TODO Dockerfileのパーサ部分を読む                               :DontKnow:
+どうやってファイルから読み込んでいるか調べる。
+
+このへん。
+
+#+begin_src git-permalink
+https://github.com/kd-collective/moby/blob/924edb948c2731df3b77697a8fcc85da3f6eef57/builder/dockerfile/copy.go#L1
+#+end_src
+** TODO [[https://www.youtube.com/watch?v=HPuvDm8IC-4][Golang UK Conf. 2016 - Liz Rice - What is a container, really? Let's write one in Go from scratch - YouTube]]
+コンテナランタイムを使わずに[[id:7cacbaa3-3995-41cf-8b72-58d6e07468b1][Go]]でコンテナを作ることで、コンテナとは何かを学ぶ。
+** TODO [[https://gihyo.jp/book/2020/978-4-297-11837-2][イラストでわかる DockerとKubernetes：書籍案内｜技術評論社]]
+仕組みの説明。
+** TODO [[https://dev.classmethod.jp/articles/container-journey/][「コンテナジャーニー」〜明日から速攻始めるAWSでのコンテナ導入運用〜 #cmdevio2018 | DevelopersIO]]
+現実的な導入ステップ。
+* Archives
+** DONE [[https://qiita.com/Brutus/items/b3dfe5957294caa82669][Docker Swarmで学ぶサービスメッシュ - Qiita]]
+CLOSED: [2023-09-09 Sat 16:42]
+:LOGBOOK:
+CLOCK: [2023-09-09 Sat 14:33]--[2023-09-09 Sat 14:58] =>  0:25
+:END:
+swarmを学ぶ。
+** DONE タスクを簡単に実行する方法を調べる
+CLOSED: [2022-08-07 Sun 17:58]
+[[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]]拡張あるいは、Makefile的なのにまとめる。
+
+ありがちなbundle-installなどはdocker-composeにワンショットのコマンドを書くことで、定形コマンドを実行することが少なくなった。自動で動かしたいやつはこれでOK。コマンドはdockerだから特殊ということはなく、ローカルと同じようにやれば良い。
+** DONE Dockerドキュメントのタイポ修正
+CLOSED: [2022-09-19 Mon 19:10]
+:LOGBOOK:
+CLOCK: [2022-09-19 Mon 17:32]--[2022-09-19 Mon 17:57] =>  0:25
+:END:
+
+- https://github.com/zembutsu/docs.docker.jp/pull/402
+
+** DONE 誤字を修正する
+CLOSED: [2023-02-18 Sat 13:01]
+[[https://docs.docker.jp/glossary.html][用語集 — Docker-docs-ja 20.10 ドキュメント]] PRを送る。
+
+- なお、オリジナルのドキュメントは群は
+- ビルド（build）とは、 を使って Docker イメージを構築する工程です。
+- イメージ構築に必要なディレクトリに置いてあるファイル群です
+- ために、 コピーオンライト 技術と を使います
+- ベストな解決作です。
+- ENTRYPOINT` に /bin/sh ま
+- ユニオン・ファイル・システムで結語するために 技術を使い
+** DONE ゴミファイルができないようにする
+CLOSED: [2023-02-18 Sat 23:40]
+
+とりあえず、👇でよい。
+
+#+begin_src shell
+  sudo chown -R $USER:$USER .
+#+end_src
+
+キャッシュや履歴関係がroot権限でできるので、削除が面倒＋コンテナを作るのが邪魔される。
+
+- できないようにする
+- 自動削除するようにする
+** DONE Rails開発 Docker環境化[9/9]
+CLOSED: [2023-03-07 Tue 00:29]
+:LOGBOOK:
+CLOCK: [2021-12-14 Tue 22:49]--[2021-12-15 Wed 00:40] =>  1:51
+:END:
+仕事をLinuxで行えるようにする。基本的なところはカバーしたが、一部できないものがある状態。
+
+*** CLOSE rails c内で日本語が含まれると失敗する
+CLOSED: [2023-03-07 Tue 00:29]
+何かおかしくなる。
+*** CLOSE CapybaraでJavascriptをオンにしたときsystem specが失敗する
+CLOSED: [2023-03-07 Tue 00:29]
+js: trueのときだけ。
+*** DONE migration時にschemaに変な差分が出る
+CLOSED: [2022-08-07 Sun 17:59]
+DB設定がおかしいようだ。
+*** DONE 非同期処理の動作確認
+CLOSED: [2022-01-12 Wed 23:08]
+:LOGBOOK:
+CLOCK: [2022-01-12 Wed 23:02]--[2022-01-12 Wed 23:08] =>  0:06
+CLOCK: [2022-01-12 Wed 22:32]--[2022-01-12 Wed 22:57] =>  0:25
+:END:
+redis, sidekiqが本当に動いてるかわからない。
+letter openerを見る限り、できてない。
+
+追加した。
+*** DONE dockerがrootユーザでファイルを生成する問題
+CLOSED: [2021-12-25 Sat 23:51]
+生成したファイルがroot権限になってしまう。
+だからbundle installを実行すると、その後は通常ユーザでは編集できなくなる。
+面倒だし、migrationとか明らかにダメな気がする。
+
+簡単な解決策と環境変数によって解決する方法を調べた。
+*** DONE 基本コマンド
+CLOSED: [2021-12-20 Mon 22:57]
+[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]部分をDocker化する。表示はまったく問題なさそう。
+リロードするとちゃんとローカルの変更が反映される。
+
+最初にルートファイルのdockerfileでベースイメージをビルドして、名前を付ける。
+#+begin_src shell
+  docker build . -t app
+#+end_src
+
+各コンテナでは↑で作成したベースイメージappを用いる。
+イメージを使う代わりに ~build .~ でも可能だが、各コンテナがイメージをビルドする(中身は同じ)ので遅くごちゃつく。
+
+#+caption: docker-compose.yml
+#+begin_src yaml
+  rails:
+    image: app
+    environment:
+      RAILS_ENV: development
+      REDIS_URL: redis://redis:6379
+      MEMCACHED_URL: memcached://memcached:11211
+      SKIP_RECAPTCHA: "true"
+      MEMCACHED_HOST: memcached
+      MEMCACHED: memcached:11211
+      WEBPACKER_DEV_SERVER_HOST: webpack
+      CHROME_HOST_NAME: http://selenium_chrome:4444/wd/hub
+    ports:
+      - 3000:3000
+    stdin_open: true
+    tty: true
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -b '0.0.0.0'"
+    volumes:
+      - .:/rails
+      - /etc/passwd:/etc/passwd:ro # Linux用
+      - /etc/group:/etc/group:ro # Linux用
+    depends_on:
+      - mysql
+
+  sidekiq:
+    image: app
+    command: bundle exec sidekiq
+    links:
+      - mysql
+      - redis
+
+  webpack:
+    image: app
+    environment:
+      NODE_ENV: development
+      RAILS_ENV: development
+      WEBPACKER_DEV_SERVER_HOST: 0.0.0.0
+    command: yarn watch
+    volumes:
+      - .:/rails
+      - /etc/passwd:/etc/passwd:ro # Linux用
+      - /etc/group:/etc/group:ro # Linux用
+    ports:
+      - 8080:8080
+#+end_src
+
+#+caption: コンテナ作成 + 立ち上げ
+#+begin_src shell
+  sudo docker-compose up --build
+#+end_src
+
+#+caption: 再起動
+#+begin_src shell
+  docker-compose {service} restart
+#+end_src
+
+#+caption: railsはサービス名。以下を好きなコマンドに変える
+#+begin_src shell
+  docker-compose run rails bundle exec rails c
+#+end_src
+
+#+caption: bundle install
+#+begin_src shell
+  docker-compose run rails bundle install
+#+end_src
+
+#+caption: テストを実行する
+#+begin_src shell
+  docker-compose run rails bundle exec bin/rspec spec/requests/top/top_spec.rb
+#+end_src
+
+#+caption: コンテナ内のshellに入ってみる
+#+begin_src shell
+  docker-compose run rails /bin/bash
+#+end_src
+*** DONE docker-compose.ymlのオーバーライド
+CLOSED: [2021-12-20 Mon 22:57]
+個人で微妙に設定が異なることもある。
+Dockerでやるのはミドルウェアだけとか、[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]もすべてやる、といったような。
+そのときはgitignoreを指定したymlを指定して起動する。
+
+#+caption: 後から読み込まれた設定ファイルで上書きされる
+#+begin_src shell
+  docker-compose -f docker-compose.yml -f docker-compose-app.override.yml up
+#+end_src
+
+もちろん一般性があるならgit管理にするのがベストだが、人によって構成が異なるので仕方ない。とくにMacだと速度に問題あるため、[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]は[[id:1658782a-d331-464b-9fd7-1f8233b8b7f8][Docker]]で立ち上げないのが多数派。
+
+[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]サービスをoverride.ymlに、それ以外のミドルウェアサービスをdocker-compose.ymlに書いてる場合は、明示する必要がある。
+#+caption: overrideしたときのbundle install。-f指定が必要。
+#+begin_src shell
+  docker-compose -f docker-compose.yml -f docker-compose-app.override.yml run rails bundle install
+#+end_src
+
+docker-compose runする場合も-fオプションが必要。
+runはコンテナを新しく作る…つまりymlを見てるので、指定が必要なのである。
+
+#+caption: model specを実行する
+#+begin_src shell
+  docker-compose -f docker-compose.yml -f docker-compose-app.override.yml exec rails bundle exec rspec --options ./.rspec ./spec/models/user_spec.rb
+#+end_src
+
+↑いちいちクソ長いコマンドを打つのは苦痛なので、shellに入って作業すると楽。
+#+caption: shellに入る
+#+begin_src shell
+  sudo docker-compose -f docker-compose.yml -f docker-compose-app.override.yml run rails /bin/sh
+#+end_src
+*** DONE DBのGUIツールとの接続
+CLOSED: [2021-12-17 Fri 20:58]
+Linux用のsqlectronがよさそう。が、上手く[[id:7dab097c-60ba-43b9-949f-c58bf3151aa8][MySQL]]と接続できない
+docker-compose.ymlで ~MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'~ を追加すると入れるように。
+パスワードを指定してるとログインできない。
+
+だがこのsqlectron、表示テーブルでの編集ができないので値を書き換えるのに非常に不便。
+別のを使ったほうがいいだろう。
+*** DONE yarnができてない
+CLOSED: [2021-12-17 Fri 20:58]
+- ポートを合わせる
+- webpack.config.jsにhostを加える
+
+が必要。
+
+#+caption: docker-compose.yml
+#+begin_src yaml
+  webpack:
+    build: .
+    environment:
+      NODE_ENV: development
+      RAILS_ENV: development
+      WEBPACKER_DEV_SERVER_HOST: 0.0.0.0
+    command: yarn watch
+    volumes:
+      - .:/rails
+    ports:
+      - 8080:8080
+    depends_on:
+      - rails
+#+end_src
+
+ホットリロードできるのを確認。
+hostを加える必要があった。
+#+caption: webpack.config.js
+#+begin_src json
+  devServer: {
+    contentBase: path.join(__dirname, 'app/assets/javascripts'),
+    allowedHosts: ['.lvh.me'],
+    host: '0.0.0.0',
+  },
+#+end_src
+** DONE [[https://tatsu-zine.com/books/linux-container-book][Linux Container Book【委託】 - 達人出版会]]
+CLOSED: [2023-03-12 Sun 23:35]
+:LOGBOOK:
+CLOCK: [2023-03-12 Sun 00:42]--[2023-03-12 Sun 01:07] =>  0:25
+CLOCK: [2023-03-11 Sat 14:24]--[2023-03-11 Sat 14:49] =>  0:25
+CLOCK: [2023-03-11 Sat 13:18]--[2023-03-11 Sat 13:43] =>  0:25
+CLOCK: [2023-03-07 Tue 00:29]--[2023-03-07 Tue 00:54] =>  0:25
+:END:
+
+コンテナの解説。後半は理解できてない。また必要なときに読む。
+
+- ~$ sudo mount --bind dir1 dir2~ みたいに、バインドマウントするコマンドが存在する
+- Namespace(名前空間)はプロセスをグループ化して、コンテナの隔離された空間を作り出す。独立させたいリソースによっていくつかの機能がある
+- Dockerの初期はコンテナ内でコマンドを実行できなかった
+- カーネルでsetnsがすべてのNamespaceに対して動作するようになってから、docker execコマンドが実行できるようになった
+- Mount Namespaceは[[id:7a81eb7c-8e2b-400a-b01a-8fa597ea527a][Linux]]カーネルに最初に実装されたNamespace(2002年)
+  - あるNamespaceごとに異なるマウントポイントの一覧を持てる
+  - コンテナ内でマウント操作を行った場合でも、そのマウントはホストOSや他のコンテナから見えないようにできる
+  - ~$ cat /proc/self/mounts~ でマウント状況を確認できる
+  - マウントプロパゲーション
+    - マウントがほかのディレクトリで反映されるか、反映されないか
+
+* References
+** [[https://www.youtube.com/watch?v=Gm5KYhMs20k][コンテナの仕組み（Linux学習） - YouTube]]
+コンテナの解説。
+
+カーネルの変更がコンテナにどう影響しそうだな、という視点すごいな。
+** [[https://tech.anti-pattern.co.jp/docker-compose/][複数のdocker-compose間で通信する]]
+docker networkを作り、コンテナを同じnetworkに所属させると、サービス名解決ができる。
+** [[https://github.com/docker-library/buildpack-deps][docker-library/buildpack-deps]]
+Dockerの公式イメージ集。
+** [[https://github.com/moby/moby/pull/40894][Add health start interval by cpuguy83 · Pull Request #40894 · moby/moby]]
+ヘルスチェックのスタートを指定するオプションを追加するプルリク。
+** [[https://github.com/moby/buildkit/issues/1472][Improved debugging support · Issue #1472 · moby/buildkit]]
+デバッガーモードの提案。気になる。
+** [[https://github.com/docker/compose/issues/3729][allow removing something in docker-compose.override.yml · Issue #3729 · docker/compose]]
+-fオプションで起動するとき、要素によっては上書きされない問題がある。例えばポートをoverride.ymlに書くと上書きはされず、2つともポート公開されてしまう。その仕様の変更が7年かかって仕様に組み込まれた。
+** [[https://github.com/compose-spec/compose-spec/pull/364][introduce remove to configure runtime autoremove for service containers by ndeloof · Pull Request #364 · compose-spec/compose-spec]]
+removeキーワードの導入。
+** [[https://docs.docker.com/engine/api/v1.42/][Docker Engine API v1.42 Reference]]
+Docker EngineのAPIリファレンス。
+** [[https://qiita.com/hichika/items/9b96634d471246359e66][個人的docker composeおすすめtips6選 - Qiita]]
+tips。
+
+- ヘルスチェック
+- サービスをグループ化
+** [[https://sunday-morning.app/posts/2020-05-06-extension-fields-docker-compose][Extension fieldsを使ってdocker-composeのコンテナ設定を共通化する]]
+共通化設定。
+
+- ~x-~ をサービス名につけると無視される
+
+** [[https://techracho.bpsinc.jp/hachi8833/2020_02_07/87447][docker-compose.ymlの中で値を使い回す方法｜TechRacho by BPS株式会社]]
+エイリアスの使い方。
+** [[https://aton-kish.github.io/blog/post/2020/10/04/docker-compose-rm/][Docker Composeの一部のサービスだけUp/Downする | Nota]]
+方法。
+** [[https://github.com/Haxxnet/Compose-Examples][Haxxnet/Compose-Examples: Various Docker Compose examples of selfhosted FOSS and proprietary projects.]]
+docker-compose集。
+** [[https://qiita.com/okdyy75/items/a707989bd6bdd7bdb490][GitHub Actionを使って自前Docker内で自動テスト - Qiita]]
+github actionsでdocker-composeを使う例。
+** [[https://containers.gitbook.io/build-containers-the-hard-way/][Build Containers the Hard Way (WIP) - Build Containers the Hard Way]]
+コンテナ技術の低レイヤーの仕組み。
+** [[https://github.com/docker-slim/docker-slim][docker-slim/docker-slim: DockerSlim (docker-slim): Don't change anything in your Docker container image and minify it by up to 30x (and for compiled languages even more) making it secure too! (free and open source)]]
+dockerイメージを分析してスリムにするツール。
+** [[https://github.com/wagoodman/dive][wagoodman/dive: A tool for exploring each layer in a docker image]]
+dockerのレイヤーごとにイメージを調査できるツール。
+** [[https://www.redhat.com/ja/topics/containers/what-is-docker][Docker とは - 解説、メリット、できること | Red Hat]]
+わかりやすい概要。
+** [[https://ja.wikipedia.org/wiki/Docker][Docker - Wikipedia]]
+ソフトウェアのわかりやすい説明。
+** [[https://github.com/phusion/passenger-docker][phusion/passenger-docker: Docker base images for Ruby, Python, Node.js and Meteor web apps]]
+Web開発用の扱いやすいDockerイメージ。
+** [[https://12factor.net/][The Twelve-Factor App]]
+SaaS開発の方法論。
+日本語訳もあった。[[https://12factor.net/ja/][The Twelve-Factor App （日本語訳）]]
+** [[https://docs.docker.jp/pdf-download.html][Docker ドキュメント日本語版 PDF ダウンロード — Docker-docs-ja 19.03 ドキュメント]]
+Dockerのドキュメント。
+** [[https://kotaroooo0-dev.hatenablog.com/entry/2020/08/06/012316][キャッシュのためにDockerビルドで中間イメージをタグ付けしレジストリにPushする - 🤖]]
+キャッシュの書き方。
+** [[https://www.forcia.com/blog/002273.html][社内pのDockerfileのベストプラクティスを公開します│FORCIA CUBE│フォルシア株式会社]]
+CLOSED: [2022-02-11 Fri 18:27]
+非常に詳しい情報。
+** [[https://qiita.com/tatsurou313/items/ad86da1bb9e8e570b6fa][BuildKitによりDockerとDocker Composeで外部キャッシュを使った効率的なビルドをする方法 - Qiita]]
+BuildKitの解説。
+** [[https://www.slideshare.net/zembutsu/dockerfile-bestpractices-19-and-advice][Dockerfileを改善するためのBest Practice 2019年版]]
+ベストプラクティス。

@@ -1,0 +1,1236 @@
+:PROPERTIES:
+:ID:       e04aa1a3-509c-45b2-ac64-53d69c961214
+:END:
+#+title: Rails
+* 概要
+Railsは[[id:cfd092c4-1bb2-43d3-88b1-9f647809e546][Ruby]]でWEBサイトを作るためのフレームワーク。
+* Memo
+** 集計時のN+1回避
+異なる条件の複数の件数を表示したいとき。たとえば↓レコードで、Receiptsに載っているproductの数ごとに集計したい。
+
+- 最終型
+| products.name | count |
+| おにぎり      |     2 |
+| お茶          |     1 |
+
+
+
+- Receipts
+| id | product_id |   |
+|  1 |          1 |   |
+|  2 |          1 |   |
+|  3 |          2 |   |
+
+- Products
+| id | name     |
+|  1 | おにぎり |
+|  2 | お茶     |
+
+こうやって書くと明らかにSQLのgroup関数を使おう、となる。が、実際のコードでは気づかずに条件を変えてeachで繰り返す…としてN+1にしてしまうことがある。こうする。
+
+#+begin_src ruby
+  Receipt.group(Product.arel_table[:id]).count
+#+end_src
+
+このようなハッシュテーブルを返す。
+
+#+begin_src json
+// product_id => count
+{
+  1=>2,
+  2=>1
+}
+#+end_src
+
+product_idがわかっているので、あとはProductをfindして名前を引けばいい。
+
+** エラー表示
+ブラウザでのエラー表示は、configで設定できる。
+デフォルトのproduction, sandbox, stagingではfalseになっていて、エラーは表示されない。
+これらの環境で表示するには、↓を加える。
+#+begin_src shell
+config.consider_all_requests_local = true
+#+end_src
+
+** viewでcontrollerクラスの情報を得る
+たまに必要なことがある。
+controllerオブジェクトが柔軟な感じ。
+
+#+caption: viewファイル
+#+begin_src ruby
+  controller.class # => #<Admin::UserController>
+  controller_name # => users
+  controller_path # => admin/users
+#+end_src
+
+#+caption: controllerが特定のmoduleをincludeしているか判定
+#+begin_src ruby
+  controller.class.included_modules.include?(User::concern)
+#+end_src
+** 定義ジャンプ
+[[id:1ad8c3d5-97ba-4905-be11-e6f2626127ad][Emacs]]から定義ジャンプしたい。
+ほかの言語やフレームワークだと[[id:eb807577-cd69-478c-8f82-264243c67354][LSP]]だのを使えばいいが、Railsではどうするのかよくわからない。
+TAGSファイルを生成して使う。
+
+#+begin_src shell
+  gem install ripper-tags
+  ripper-tags -e -R -f TAGS
+#+end_src
+
+あとは、C-. で生成したタグを指定すればOK。
+
+gemも定義ジャンプ対象にしたい場合、作業ディレクトリ内にgemのソースコードを置けばよい。
+#+begin_src shell
+  bundle install --path vendor/bundle
+#+end_src
+
+[[https://qiita.com/arakaji/items/0cdfa843a0e0233df153][Railsアプリ内をEmacsで自由にタグジャンプ! - Qiita]]
+** mailerはキューにためられるので、Serializationできない値は渡すとエラーになる
+SerializationErrorになる。
+メーラーに対して、シリアライゼーションできないオブジェクトは渡すことができない。
+Railsから[[id:48b99bce-05ce-49af-921d-1e321e5a4f8b][Redis]]に渡されるが、[[id:48b99bce-05ce-49af-921d-1e321e5a4f8b][Redis]]はkey-value storeの形でないと保存できないから。
+[[https://github.com/rails/rails/issues/18519][Mail and deliver_later doesn't work with date argument · Issue #18519 · rails/rails]]
+** join先のテーブルでwhere
+A -< B -< C -< D みたいな関係。
+#+caption: mergeで関連テーブル先で条件を絞れる
+#+begin_src ruby
+  a = A.joins(b: [c: :d])
+        .where(a: { flag_a: true })
+        .merge(D.where(flag_d: true))
+#+end_src
+
+同じ意味のダサい書き方。
+#+begin_src ruby
+  a = a.joins(b: [c: :d])
+        .where(a: { flag_a: true })
+        .where(d: { flag_d: true })
+#+end_src
+** [[id:1658782a-d331-464b-9fd7-1f8233b8b7f8][Docker]]サンプル
+開発用環境のサンプル。サクっと起動したい用。
+プロジェクトのあちこちで使ってるので、どこかにまとめたほうがよさそうだな。
+
+#+caption: Dockerfile
+#+begin_src
+FROM phusion/passenger-ruby27:latest
+
+WORKDIR /tmp
+
+ADD Gemfile /tmp/
+ADD Gemfile.lock /tmp/
+RUN gem update --system
+RUN bundle install
+
+COPY . /home/app/webapp
+RUN usermod -u 1000 app
+RUN chown -R app:app /home/app/webapp
+WORKDIR /home/app/webapp
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+#+end_src
+
+かぶり防止のため3001番ポートの方を変えてブラウザアクセスする。
+#+caption: docker-compose.yml
+#+begin_src yaml
+version: '3'
+
+services:
+  rails:
+    container_name: rails
+    build: .
+    command: bash -c 'rm -f tmp/pids/server.pid && bundle exec rails s -b 0.0.0.0'
+    volumes:
+      - .:/home/app/webapp
+    ports:
+      - "3001:3000"
+#+end_src
+** 依存関係一切なくrails newする
+公式のrailsコンテナ内でrails newすればよい。
+
+#+caption: 依存がない作成方法。user周りは権限問題のため⚠一行
+#+begin_src shell
+docker run -it --rm --user "$(id -u):$(id -g)" -v "$PWD":/usr/src/app -w /usr/src/app rails rails new --skip-bundle --api --database postgresql .
+#+end_src
+
+依存がないbundle install。
+ruby:2.7.5イメージで走らせる。
+#+begin_src shell
+docker run --rm -v "$PWD":/usr/src/app -w /usr/src/app ruby:2.7.5 bundle install
+#+end_src
+
+** factoryがないモデルを検知するタスク
+factoryはテストで使うので、fixtureほど忘れることはない。作り忘れたり、過去もので漏れているものがたまにあるので検知する。
+
+#+caption: rakeタスクファイルにて
+#+begin_src ruby
+  require "factory_bot_rails"
+  include FactoryBot::Syntax::Methods
+  include ActionDispatch::TestProcess #  # fixture_file_uploadメソッドでエラーになるため必要。
+
+  task factory: :environment do
+      msg = []
+      errors = []
+
+      Rails.application.eager_load!
+      ApplicationRecord.subclasses.each do |model|
+        begin
+          create(model.name.underscore.gsub(%r{/}, '_')) # factoryのメソッド
+          # UserPayment -> user_payment
+          # admin/user_payment -> admin_user_payment
+        rescue => e
+          errors << e if e.class == KeyError
+        end
+      end
+
+      puts errors
+
+      raise '登録されてないfactoryがあります' if errors
+    end
+#+end_src
+** レコードがないテーブルを検知するタスク
+fixtureの作り忘れなどよくあるので、seedを実行したあとにチェックするタスクを走らせるとよい。
+
+#+caption: rakeタスクファイルにて
+#+begin_src ruby
+  task lint: :environment do
+    msg = []
+    invalid = false
+
+    Rails.application.eager_load!
+    ApplicationRecord.subclasses.each do |model|
+      msg << "#{model.name} => #{model.count}"
+      invalid = true if model.count.zero?
+    end
+
+    puts msg
+
+    raise 'レコードがないテーブルがあります' if invalid
+  end
+#+end_src
+** seed_fu内でfactory botを使う
+SeedFu.seedを実行するコンテキストでrequire, includeしておけばメソッドが使える。
+#+caption: rakeタスクファイル
+#+begin_src ruby
+  require "factory_bot_rails"
+  include FactoryBot::Syntax::Methods
+  include ActionDispatch::TestProcess
+  SeedFu.quiet = true
+
+  task lint: :environment do
+    SeedFu.seed("db/fixtures/#{env}")
+  end
+#+end_src
+** rakeタスク
+rakeタスクは、普通ターミナルから実行するが、ほかから実行したいときがある(テストとか)。
+
+#+caption: rails_helper.rbにて
+#+begin_src ruby
+  config.before(:each) do
+    Rake.application.tasks.each(&:reenable)
+  end
+#+end_src
+
+#+caption: テスト上にて実行する
+#+begin_src ruby
+  Rake.application['namespace:command'].invoke
+#+end_src
+
+のようにして、実行できる。
+** 非同期処理
+Webにおける非同期処理はメールとか、外部とのAPI連携とか、比較的時間のかかる処理で用いられている。
+とりあえず画面を返し、待たせないようにする。
+
+sidekiqは非同期タスクワーカー。
+[[id:48b99bce-05ce-49af-921d-1e321e5a4f8b][Redis]]はインメモリデータベース。
+
+たとえばRails上でメールを送る処理が走るとき、railsはそのタスクをredisに送り、保持する(キューする)。sidekiqは、キューされたタスクを順次処理していく。
+クラウドサービスの[[id:48b99bce-05ce-49af-921d-1e321e5a4f8b][Redis]]を用いることで、ダウンしても未処理のジョブを失わない。
+** preload, eager_load, includes
+ややこしいがパフォーマンスを考えるうえで必要なので理解しておく。
+
+- [[https://tech.stmn.co.jp/entry/2020/11/30/145159][preload、eager_load、includesの挙動を理解して使い分ける - stmn tech blog]]
+
+| メソッド   | キャッシュ | クエリ     | 用途                         |
+|------------+------------+------------+------------------------------|
+| joins      | しない     | 単数       | 絞り込み                     |
+| eager_load | する       | 単数       | キャッシュと絞り込み         |
+| preload    | する       | 複数       | キャッシュ                   |
+| includes   | する       | 場合による | キャッシュ、必要なら絞り込み |
+
+#+begin_quote
+そのテーブルとのJOINを禁止したいケースではpreloadを指定し、JOINしても問題なくてとりあえずeager loadingしたい場合はincludesを使い、必ずJOINしたい場合はeager_loadを使いましょう。
+#+end_quote
+
+- [[https://qiita.com/ryosuketter/items/097556841ec8e1b2940f][ActiveRecordのincludesは使わずにpreloadとeager_loadを使い分ける理由 - Qiita]]
+
+| メソッド   | SQL(クエリ)            | キャッシュ | アソシエーション先のデータ参照 | デメリット                                                |
+|------------+------------------------+------------+--------------------------------+-----------------------------------------------------------|
+| joins      | INNER JOIN             | しない     | できる                         | N+1問題                                                   |
+| preload    | JOINせずそれぞれSELECT | する       | できない                       | IN句大きくなりがち                                        |
+| eager_load | LEFT JOIN              | する       | できる                         | LEFT JOINなので、相手が存在しなくても全部ロードしてしまう |
+| includes   | 場合による             | する       | できる                         | ただしく理解してないと挙動がコントロールできない          |
+
+- preload
+  - 多対多のアソシエーションの場合
+    - [[id:8b69b8d4-1612-4dc5-8412-96b431fdd101][SQL]]を分割して取得するため、レスポンスタイムが早くなるため
+  - アソシエーション先のデータ参照ができない
+  - データ量が大きいと、メモリを圧迫する可能性がある
+
+- eager_load
+  - 1対1あるいはN対1のアソシエーションをJOINする場合
+  - JOIN先のテーブルを参照したい場合
+
+- joins
+  - メモリの使用量を必要最低限に抑えたい場合
+  - JOINした先のデータを参照せず、絞り込み結果だけが必要な場合
+
+- includes
+  - なるべく使わないほうがいい
+  - 条件によってpreloadとeager_loadを振り分ける
+
+- [[https://qiita.com/k0kubun/items/80c5a5494f53bb88dc58][ActiveRecordのjoinsとpreloadとincludesとeager_loadの違い - Qiita]]
+** Railsの[[id:bb71747d-8599-4aee-b747-13cb44c05773][OSS]]
+Railsをどう書くかの参考になりそうなリポジトリ。
+
+- [[https://github.com/gitlabhq/gitlabhq][gitlabhq/gitlabhq: GitLab CE Mirror | Please open new issues in our issue tracker on GitLab.com]]
+- [[https://github.com/rubygems/rubygems.org][rubygems/rubygems.org: The Ruby community's gem hosting service.]]
+- [[https://github.com/discourse/discourse][discourse/discourse: A platform for community discussion. Free, open, simple.]]
+- [[https://github.com/mastodon/mastodon][mastodon/mastodon: Your self-hosted, globally interconnected microblogging community]]
+- [[https://github.com/diaspora/diaspora][diaspora/diaspora: A privacy-aware, distributed, open source social network.]]
+- [[https://github.com/forem/forem][forem/forem: For empowering community 🌱]]
+** ルーティングのファイルと名前空間を切り出す
+[[https://qiita.com/sibakenY/items/973fbe635a7f91ae105c][Railsのルーティングをdrawを使ってまとめる - Qiita]]
+
+ファイル読み込みでルーティングのDSLを評価するメソッドを作る。
+これによって、ファイルで名前空間を分割できる。
+
+#+caption: config/initializers/draw_routes.rb
+#+begin_src ruby
+module DrawRoute
+  RoutesNotFound = Class.new(StandardError)
+
+  def draw(routes_name)
+    drawn_any = draw_route(routes_name)
+
+    drawn_any || raise(RoutesNotFound, "Cannot find #{routes_name}")
+  end
+
+  def route_path(routes_name)
+    Rails.root.join(routes_name)
+  end
+
+  def draw_route(routes_name)
+    path = route_path("config/routes/#{routes_name}.rb")
+    if File.exist?(path)
+      instance_eval(File.read(path))
+      true
+    else
+      false
+    end
+  end
+end
+
+ActionDispatch::Routing::Mapper.prepend DrawRoute
+#+end_src
+
+#+caption: config/routes/admin.rb
+#+begin_src ruby
+  namespace :admin do
+    resources :users
+  end
+#+end_src
+
+#+caption: routes.rb
+#+begin_src ruby
+  Rails.application.routes.draw do
+    draw :admin
+  end
+#+end_src
+** 時間関係
+[[https://qiita.com/jnchito/items/cae89ee43c30f5d6fa2c][RubyとRailsにおけるTime, Date, DateTime, TimeWithZoneの違い - Qiita]]
+** ネストしたトランザクション
+ネストしたトランザクションでは内側のロールバックが、無視されるケースがある。
+トランザクションを再利用するため。
+なので、トランザクションを再利用しないように明示すればよい。
+
+#+begin_src ruby
+ActiveRecord::Base.transaction(joinable: false, requires_new: true) do
+  # inner code
+end
+#+end_src
+
+[[https://qiita.com/jnchito/items/930575c18679a5dbe1a0][【翻訳】ActiveRecordにおける、ネストしたトランザクションの落とし穴 - Qiita]]
+[[https://api.rubyonrails.org/classes/ActiveRecord/Transactions/ClassMethods.html][ActiveRecord::Transactions::ClassMethods]]
+** Fakerでboolean生成
+
+↓以下2つは同じ意味。
+
+#+caption: fakerで
+#+begin_src rb
+  Faker::Boolean.boolean
+#+end_src
+
+#+caption: sampleで
+#+begin_src ruby
+  [true, false].sample
+#+end_src
+** マイグレーションでカラムの型を変える
+usersのdeleted_atカラムをinteger型 から datetime型に変える例。
+
+1. 一時カラムを作ってそこで値を作成する
+2. 旧カラムを削除する
+3. 一時カラムの名前を変えて新カラムにする
+
+~ActiveRecord::Base.connection.execute(sql)~ を使うと生の[[id:8b69b8d4-1612-4dc5-8412-96b431fdd101][SQL]]を実行できる。
+
+#+caption:
+#+begin_src ruby
+  def up
+    connection.execute 'ALTER TABLE users ADD deleted_at_tmp datetime'
+    connection.execute 'UPDATE users SET deleted_at_tmp = FROM_UNIXTIME(deleted_at)'
+    connection.execute 'ALTER TABLE users DROP COLUMN deleted_at'
+    connection.execute 'ALTER TABLE users CHANGE deleted_at_tmp deleted_at datetime'
+  end
+#+end_src
+** 便利なデバッガweb-console
+view内でブレークポイントを設定し、ブラウザ上でコンソールを立ち上げることができるライブラリ。
+Railsにデフォルトで入っている。
+
+#+caption: 任意のview, controllerに追加する
+#+begin_src html
+<% console %>
+#+end_src
+
+あとは該当箇所にブラウザでアクセスするとコンソールが立ち上がる。
+再実行性がないので、テストでやるのが一番だとは感じる。
+** update_atを更新しない
+CLOSED: [2023-01-08 Sun 09:41]
+バッチ処理でいじった場合は更新するとよくないことがある。
+
+- [[https://ohbarye.hatenablog.jp/entry/2016/08/02/213444][更新時に updated_at, created_at を更新しない - valid,invalid]]
+
+#+begin_src ruby
+# Active Record レベル
+ActiveRecord::Base.record_timestamps = false
+
+# モデルのみ
+User.record_timestamps = false
+
+# インスタンスのみ
+user.record_timestamps = false
+#+end_src
+
+** save(validate: false)
+バリデーションが不要なとき、 ~user.save!(validate: false)~ とすると無効化できる。
+データを不整合を直したいけどほかのバリデーションにかかる、ようなときに使う。
+
+あるいは ~assign_attribute~ でもよい。
+** presence: trueなのにnilがあるレコードを検知する
+モデルバリデーションがかかっていても、既存のレコードはnilを含む可能性がある。
+モデルバリデーションは入出力のみ監視する。だから既存レコードに残っている可能性がある。
+この場合、編集できなくて不便。検知してテーブルにも制約をかけると安全になる。DBバリデーションは、既存レコードにも入ってないことを保証できる。
+
+直にテーブルの制約を辿る方法がわからないのでレコードを探索する感じになった。レコードがたくさんある環境で実行すると検知できる。全部辿るのでクソ重い。
+#+begin_src ruby
+  msgs = {}
+
+  Rails.application.eager_load!
+  ApplicationRecord.subclasses.each do |model|
+    presence_validates = model.validators.select { |v| v.class.to_s.include?('ActiveRecord::Validations::PresenceValidator') }
+    presence_validates.each do |presence_validate|
+      model.all.find_each do |record|
+        msgs["#{record.class} #{presence_validate.attributes.first}"] = '❌ presence: trueあるのにnilレコードがある><' unless record.send(presence_validate.attributes.first)
+      end
+    end
+  end
+
+  pp msgs.sort #  [["User name", "❌ presence: trueあるのにnilレコードがある><"]]
+#+end_src
+
+まずnilをなくす。それからテーブルのバリデーションを追加する。
+** バックエンドエンジニアというときの正確なスコープ
+APIサーバとしての利用、バックとフロントの分割が主流になっている。
+採用者がRailsのバックエンド開発者を探している、というときはAPI開発経験がある人材を探しているといえる。
+** テストによるスマートな画像確認
+system specでスクショをとって確認する。
+わざわざ用意して確認しない。
+
+TDDを徹底し、一切ブラウザ確認せずにプロダクトを開発した、という偉人もいる。
+** オートロードするgem: zeitwerk
+zeitwerkはオートロードするgem。Rails 6で使われている。
+Railsでrequireしなくていいのはこれを使っているから。
+[[https://github.com/fxn/zeitwerk][fxn/zeitwerk: Efficient and thread-safe code loader for Ruby]]
+** デフォルトスコープを無視できるreorder
+デフォルトスコープを無視できる。
+
+#+caption: updated_atをソートに使う
+#+begin_src ruby
+  User.order(:id).reorder(:updated_at)
+#+end_src
+
+** 開発用データの用意
+開発用データにはいくつかの方法がある。
+
+- seedデータで用意する。毎回必要なときにresetして開発する
+  - クリーンな環境で再現性が高い開発を行える。
+  - 早い
+
+- 本番データに近いデータで行う
+  - デザインや性能の問題に気づきやすい
+  - ユースケースがイメージしやすい
+  - データの準備が楽
+  - 整合性のメンテナンスが必要
+** ALTER TABLEは重い
+テーブルのコピーを作るので重い。
+bulk: trueをつけるとALTER TABLEをまとめるので高速になる。
+#+begin_src ruby
+  def up
+    change_table :legal_engine_forms, bulk: true do |t|
+      ...
+    end
+  end
+#+end_src
+** テーブル名にプレフィクスを設定する
+特定の機能に対して、関係したテーブルを複数つくるとき、プレフィクスのような形でモデル名やテーブル名を決めることがある。
+admin_user、admin_page、admin_permissionとか。
+こうすることの問題点: 衝突を避けるためにmodel名とテーブル名が長くなる。ディレクトリも見にくくなる。一語だとまだいいのだが、複数名になるとつらくなる。
+
+解決のためには、moduleを定義し、内部でtable_name_prefixを設定するといい。
+
+#+caption: modelにて
+#+begin_src ruby
+  module Admin
+    def self.table_name_prefix
+      'admin_'
+    end
+  end
+
+  module Admin
+    class User < ApplicationRecord
+    end
+  end
+#+end_src
+
+こうするとモデル名はAdmin::Userで、テーブル名はadmin_usersになりわかりやすい。
+** Rails環境でバッチ処理する
+#+caption: Rails環境でのクラスを実行できる
+#+begin_src ruby
+  rails runner "User.first"
+  rails r "User.first"
+#+end_src
+
+サービスクラス化したコマンドを実行するときに使える。
+** routesの制約
+#+begin_src ruby
+constraints(-> (req) { req.env["HTTP_USER_AGENT"] =~ /iPhone/ }) do
+  resources :iphones
+end
+#+end_src
+
+[[https://api.rubyonrails.org/v6.0.2/classes/ActionDispatch/Routing/Mapper/Scoping.html#method-i-constraints-label-Dynamic+request+matching][ActionDispatch::Routing::Mapper::Scoping]]
+** 大量のroutes変更を楽に確認する
+redirect設定やリファクタリングでroutesを大量に変更して、挙動の変更を追いたい場合。
+rails routesの結果のdiffを取れば、楽に確認できる。
+** create_or_find_by
+データベースのユニーク制約を使って作成、できなければ初めの1件を取得する。
+find_or_create_byでは作成されるまでに別プロセスによって作成されている可能性があったので、その問題を解決した処理。
+~create_or_find_by!~ はエラーの時に例外が発生する。
+
+#+caption: データベースのユニーク制約を使って作成、できなければ初めの1件を取得
+#+begin_src ruby
+  User.create_or_find_by(name: 'aaa')
+#+end_src
+
+[[https://railsdoc.com/page/create_or_find_by][create_or_find_by | Railsドキュメント]]
+** 使われてないファイルを検索する
+assetsは相対パスが利用されないので絶対パスで検索してヒットしなければ未使用と判断できる、とのこと。
+#+caption: 検査タスクの例
+#+begin_src ruby
+namespace :assets do
+  desc 'prune needless image file'
+  task 'prune:images' => :environment do
+    base = Rails.root.join('app/assets/images/')
+
+    Dir[Rails.root.join('app/assets/images/**/*.{jpg,jpeg,gif,png,svg}')].each do |path|
+      target_path = path.to_s.gsub(/#{base}/, '')
+      puts "execute: git grep '#{target_path}'"
+      res = `git grep '#{target_path}'`
+
+      if res.empty?
+        puts "execute: rm #{path}"
+        FileUtils.rm path
+        puts '=> removed'
+      else
+        puts '=> used somewhere'
+      end
+
+      puts
+    end
+  end
+end
+#+end_src
+** [[id:cfd092c4-1bb2-43d3-88b1-9f647809e546][Ruby]]バージョンアップデート
+超強い人が言っていたメモ。
+コマンドを組み合わせて一気に置換して検討していく。
+#+caption: 2.6.5 -> 2.7.1に全体を置換する
+#+begin_src shell
+git grep -l '2\.6\.5' | xargs sed -i 's/2\.6\.5/2.7.1/g'
+#+end_src
+vendor/bundle を削除して、bundle install。
+マイナーバージョンを変更した場合は .rubocop.yml の RUBY_VERSION を修正(parser gemの指定)。
+** 新規作成時はform表示しない
+formを共通化しているようなとき。
+このカラムはedit時のみ出したい、というようなことがある。
+#+caption: new時persistされてないので表示されない
+#+begin_src ruby
+  form_for do |f|
+    f.number_field :position if @content_category.persisted?
+  end
+#+end_src
+** 一部アクションだけvalidation
+#+caption: onでアクションを指定できる。
+#+begin_src ruby
+validates :user_id, presence: true, :on => :create
+#+end_src
+** 便利な日付操作
+#+caption: Time.zone
+#+begin_src ruby
+Time.zone.yesterday
+Time.zone.today.ago(7.days)
+#+end_src
+
+[[https://qiita.com/mmmm/items/efda48f1ac0267c95c29][Railsでの日付操作でよく使うものまとめ - Qiita]]
+** 安全に関連カラムを追加する
+Blogにuser_idを後から追加したい、みたいなとき。User -< Blog。
+最初にnullableで外部キーを作成する。
+
+次に、新規作成時にmodelでvalidationをかける。
+すると既存レコードの外部キーはnull、新しくできるレコードは外部キーありという状態になる。
+外部キーなしが増えることはない。移行をする。
+nullのレコードがゼロになってから外部キー制約をつけて関連カラム追加完了。
+** 関連カラムを安全に変更する
+レコードがすでに入っているテーブルの関連を変更する場合。
+たとえば、blogs >- somethings >- users を blogs >- users というような。somethingsテーブルは何もしてないので削除したい、とする。
+何も考えずにやると、一気にすべてを切り替えることになりがち。
+
+悪い例を示す。
+1. 最初に関連カラムを変更する。
+  #+caption: modelファイルで関連変更
+  #+begin_src ruby
+   belongs_to :user # 旧 belongs_to :something
+  #+end_src
+2. 旧関連を使ってたアプリケーション側をすべて変更する。MVCすべて。
+3. 新しい関連カラムは空で、旧データを移行しないといけない。移行は↑のデプロイと同時にしないと不整合になる。デプロイと移行スクリプトの間の変更は無視されるから。
+4. 1~3をまとめて一気にリリースする
+
+ということで、大量な複数層の変更をぶっつけ本番でしないといけなくなる。途中で嫌になるだろうし、運が悪ければミスって大変なことになる。
+
+ではどうするか。根本的なアイデアは、2つの関連を同時に保持しておくことだ。
+同時に持っておけば、大丈夫なことを確認してから関連を変更するだけでいい。そうやって遅延させることで、一気にいろいろな変更をしなくてよくなる。
+
+具体的にどうやるか。良い例。
+#+caption: modelのbefore_saveでオンデマンドコピー
+#+begin_src ruby
+  class Blog < ApplicationRecord
+    before_save do
+      self.user_id ||= something.user_id
+    end
+  end
+#+end_src
+
+としておくと、保存時にblog.user_idとblog.something.user_idの両方に関連がコピーされる。somethingsを経由しないでよくなる。
+
+既存データについても処理を追加しておく。
+#+caption: modelにメソッドを作っておく
+#+begin_src ruby
+  class User < ApplicationRecord
+    def migrate
+      self.user_id ||= something.user_id
+      save!
+    end
+  end
+#+end_src
+そして、全Userでmigrateを実行すれば既存データにも新しいカラムが入る。
+
+既存データと新しく作成されるレコードをおさえたので、新旧2つの関連カラムは完全に同等になる。
+ここまででマージ、リリースする。
+問題ないことを確認したあとで、新旧カラムが使える状態を活かしてアプリケーション側の変更…実際の関連の変更をやる(一番の目的の箇所)。
+ここまででマージ、リリースする。
+
+その後、移行処理とカラムを削除して片付ければ完了。(あるいは移行処理は前の時点で消す)
+関連カラムだけでなく、何かカラムを移すときにはすべて同様にできる。
+
+実際のタスクでは、migration処理をする箇所は複数になるので前もって調査が必要。
+** カラム名を安全に変更する
+カラム名変更とアプリケーション側の変更を分け、変更範囲を狭める。
+alias_attributeを追加する。すると、新しいカラム名でもアクセスできるようになる。
+依存しているほかのアプリケーションの変更をする(new_user_idに書き換える)。
+#+caption: modelファイルにて、追加
+#+begin_src ruby
+alias_attribute :new_user_id, :typo_user_id
+#+end_src
+
+それらを書き換えたらマージ、リリースする。
+その後、カラム名を書き換えるマイグレーションを作成する。使っている箇所はないので安全に変更できる。
+マイグレーション後、alias_attributeを削除する。
+** テーブル名を安全に変更する
+最初にmodel クラス名を変更し、テーブルの参照先に変更前のものを設定する。
+#+begin_src ruby
+  class Blog_After < ApplicationRecord
+    self.table_name = :blog_before
+  end
+#+end_src
+すると、アプリケーション側だけの変更で、DBの変更はない状態で動作上の変更はなくなる。
+次にアプリケーションの、ほかの依存している箇所を修正する。
+ここまで1つのPRにする。
+
+テストが通ったりリリースできたら、テーブル名変更のマイグレーションを作成し、modelでのtable_name設定を削除するPRをつくる。
+安全に変更が完了する。
+テーブルの変更と、アプリケーションの変更を同時にやらないと安全だし分割できてすっきりする。
+** modelのログを保持する
+[[https://github.com/paper-trail-gem/paper_trail][paper-trail-gem/paper_trail: Track changes to your rails models]]
+変更や差分、変更時の何らかの情報(つまり、作業者とか)を保存、閲覧できる。
+
+[[https://github.com/ankit1910/paper_trail-globalid][ankit1910/paper_trail-globalid: An extension to paper_trail, using this you can fetch actual object who was responsible for this change]]
+paper_trailの拡張。変更したか取得できるようになる。
+** サロゲートキー
+Railsでいうところの ~id~ のこと。Rails5 からはbigintで設定されている。
+主キーとして使う人工的な値、というのがポイント。
+
+[[https://e-words.jp/w/%E3%82%B5%E3%83%AD%E3%82%B2%E3%83%BC%E3%83%88%E3%82%AD%E3%83%BC.html][サロゲートキー（surrogate key）とは - IT用語辞典 e-Words]]
+#+begin_quote
+サロゲートキーとは、データベースのテーブルの主キーとして、自動割り当ての連続した通し番号のように、利用者や記録する対象とは直接関係のない人工的な値を用いること。また、そのために設けられたカラムのこと。
+#+end_quote
+** ロールバックできないマイグレーションであることを明示する
+たいていの場合はコメントでロールバックできないなどと書けばよいが、rollbackが破壊的な動作になる場合があるのでdownに書く。
+#+caption: ActiveRecord::IrreversibleMigration
+#+begin_src ruby
+  def down
+    raise ActiveRecord::IrreversibleMigration
+  end
+#+end_src
+** null制約を追加しつつdefault設定
+[[https://qiita.com/akinov/items/852fe789fe98a44350a9][Railsのmigrationで後からNULL制約を設定する - Qiita]]
+
+null制約追加には、 ~change_column_null~ を使う。
+null制約だけ追加すると変更前にnullだったレコードでエラーになってしまうので、同時にdefaultを設定するとよい。
+
+#+caption: null制約 + default設定
+#+begin_src ruby
+class ChangePointColumnOnPost < ActiveRecord::Migration[5.2]
+  def change
+    change_column_null :posts, :point, false, 0
+    change_column_default :posts, :point, from: nil, to: 0
+  end
+end
+#+end_src
+
+#+caption: ↑falseはnullオプション
+#+begin_src ruby
+  change_column_null(table_name, column_name, null, default = nil)
+#+end_src
+** migrationファイルによる不整合解消タスク
+migrationファイルは一部DSLが扱われるだけで普通のrubyファイルと変わらない。
+データベースの不整合を解消することにも使える。
+
+#+caption:
+#+begin_src ruby
+  def up
+    Blog.unscoped.where(user_id: nil).delete_all
+  end
+#+end_src
+というように。
+環境別にconsoleでコマンドを実行する必要がないので便利。
+** unscopedでdefault_scopeを無効化
+~unscoped~ はdefault_scopeを無効化する。
+[[https://apidock.com/rails/ActiveRecord/Base/unscoped/class][unscoped (ActiveRecord::Base) - APIdock]]
+
+#+caption: 自動でpublishedの条件が発行されていることがわかる
+#+begin_src ruby
+  class Post < ActiveRecord::Base
+    def self.default_scope
+      where :published => true
+    end
+  end
+
+  Post.all          # Fires "SELECT * FROM posts WHERE published = true"
+  Post.unscoped.all # Fires "SELECT * FROM posts"
+#+end_src
+
+#+caption: default_scopeの条件がなくなる
+#+begin_src ruby
+  Post.unscoped {
+    Post.limit(10) # Fires "SELECT * FROM posts LIMIT 10"
+  }
+#+end_src
+** inverse_ofで双方向の不整合を防ぐ
+[[https://qiita.com/itp926/items/9cac175d3b35945b8f7e][inverse_of について - Qiita]]
+
+双方向の関連付けの不整合を防ぐ関連オプション。belongs_to, has_many等ではデフォルトでオンになっているよう。
+
+#+caption:
+#+begin_src ruby
+  class Category
+    has_many :blog
+  end
+
+  class Order
+    belongs_to :category
+  end
+#+end_src
+
+#+caption: 不整合
+#+begin_src ruby
+  c = Category.first
+  b = c.orders.first
+
+  c.title = "change"
+  c.title == b.category.title #=> false 値は異なる
+  c.equal? b.category #=> false 同じオブジェクトでない
+#+end_src
+inverse_ofを使うと同じオブジェクトを使うようになる。
+** リレーションの不整合を検知する
+よくわからない。
+全部辿る方法は色々応用が効きそう。
+
+#+caption: 不整合検知タスク
+#+begin_src ruby
+desc '外部キーの整合性を検証する'
+task extract_mismatch_records: :environment do
+  Rails.application.eager_load!
+
+  ApplicationRecord.subclasses.each do |model|
+    model.reflections.select { |_, reflection| reflection.is_a?(ActiveRecord::Reflection::BelongsToReflection) }.each do |name, reflection|
+      model_name = model.model_name.human
+      foreign_key = reflection.options[:foreign_key] || "#{name}_id"
+
+      unless model.columns.any? { |column| column.name == foreign_key.to_s }
+        puts "💢 #{model_name} には #{foreign_key} フィールドがありません"
+        next
+      end
+
+      parent_model_class_name = reflection.options[:class_name] || reflection.name.to_s.classify
+      parent_model = parent_model_class_name.safe_constantize
+
+      unless parent_model
+        puts "💢 #{model_name} が依存している #{parent_model_class_name} は参照できません"
+        next
+      end
+
+      parent_model_name = parent_model.model_name.human
+
+      begin
+        # NOTE: 親テーブルのIDとして存在しない外部キーの数を照会
+        relation = model.unscoped.where.not(foreign_key => parent_model.unscoped.select(:id)).where.not(foreign_key => nil)
+        sql = relation.to_sql
+        count = relation.count
+
+        if count.zero?
+          puts "💡 #{model_name} の #{parent_model_name} の外部キーは整合性が保証されています" unless ENV['ONLY_FAILURE']
+        else
+          puts "💣 #{model_name} の #{parent_model_name} の外部キーで不正なキーが #{count} 件 設定されています"
+        end
+
+        if ENV['DEBUG']
+          puts "=> #{sql}\n"
+          puts
+        end
+      rescue StandardError
+        # NOTE: マスタデータの場合はスキップ
+        puts "🈳 #{model_name} の #{parent_model_name} の整合性の検証をスキップしました" unless ENV['ONLY_FAILURE']
+      end
+    end
+  end
+end
+#+end_src
+
+Reflectionクラスはアソシエーション関係のmoduleのよう。
+https://github.com/kd-collective/rails/blob/f132be462b957ea4cd8b72bf9e7be77a184a887b/activerecord/lib/active_record/reflection.rb#L49
+
+#+begin_quote
+Reflection enables the ability to examine the associations and aggregations of Active Record classes and objects. This information, for example, can be used in a form builder that takes an Active Record object and creates input fields for all of the attributes depending on their type and displays the associations to other objects.
+
+Reflectionを使用すると、Active Recordのクラスやオブジェクトの関連付けや集計を調べることができます。この情報は、例えば、Active Recordオブジェクトを受け取り、その型に応じてすべての属性の入力フィールドを作成します。他のオブジェクトとの関連を表示するフォームビルダーで使用できます。
+#+end_quote
+
+Reflectionに関する記事。
+[[https://qiita.com/kkyouhei/items/067d5bb8d79c71f1646b][Railsのコードを読む アソシエーションについて - Qiita]]
+** クエリ高速化
+ネストしてクエリを発行してるときは何かがおかしい。
+
+- parent_category -> category -> blog のような構造
+
+#+caption: ひどいクエリメソッド
+#+begin_src ruby
+  parent_categories.each do |parent_category|
+    parent_category.categories.each do |category|
+      category.blogs.each do |blog|
+        @content << blog.content
+      end
+    end
+  end
+#+end_src
+
+- parent_category -> category -> blog
+
+#+caption: joins
+#+begin_src ruby
+  Blog.joins(categories: category)
+    .merge(Category.where(parent_category: parent_large_categories))
+#+end_src
+** Migrationファイルをまとめて高速化する
+Migrationファイルは変更しないのが基本だが、数が多い場合、 ~rails migrate:reset~ に時間がかかる。
+
+db/schema.rbの内容を、最新のタイムスタンプのマイグレーションにコピーする。
+
+- つまり現在のDB状況が、そのまま1つのmigrationとなる。DSLが同じなので問題ない。
+- migrationのタイムスタンプはすでに実行済みのため、動作に影響しない。
+** Gemfileで環境指定する
+Gemfileのgroupキーワードは、指定環境でしかインストールしないことを示す。
+
+#+caption: developmentでしかインストールされない
+#+begin_src ruby
+  group :development do
+    gem 'annotate', require: false
+  end
+#+end_src
+
+なので環境を指定せずにテストを実行したとき、gem not foundが出る。実行されたのがdevelopment環境で、テストのgemが読み込まれてないから。 ~RAILS_ENV=test~ がついているか確認する。
+** 論理削除と物理削除
+論理削除は削除したときレコードを削除するのではなく、フラグをトグルするもの。
+逆に物理削除はレコードから削除すること。
+
+論理削除のメリットは、データが戻せること。
+
+が、データベースの運用的に、後から問題となることの方が多い。
+
+- 削除フラグを付け忘れると事故になる。削除したはずなのに表示したり、計算に入れたりしてしまう
+- データが多くなるためパフォーマンスが悪くなる
+
+Railsではgem act_as_paranoidを使って簡単に論理削除処理を追加できる。deleted_atカラムを論理削除を管理するフラグとして用いる。
+** find、find_by、whereの違い
+[[https://qiita.com/tsuchinoko_run/items/f3926caaec461cfa1ca3][find、find_by、whereの違い - Qiita]]
+
+- find :: 各モデルのidを検索キーとしてデータを取得するメソッド。モデルインスタンスが返る
+- find_by :: id以外をキーとして検索。複数あった場合は最初だけ取る。モデルインスタンスが返る。
+- where :: id以外をキーとして検索。モデルインスタンスの入った配列が返る。
+** acts_as_list
+acts_as_listは順番を管理するgem。
+[[https://github.com/brendon/acts_as_list][brendon/acts_as_list: An ActiveRecord plugin for managing lists.]]
+
+順番の生成と、操作を可能にする。
+modelに順番カラムを指定すると、create時に自動で番号が格納される。
+逆にフォームで番号格納しているとそれが優先して入るため自動採番されない。
+new時には番号フォームを表示しないなどが必要。
+** テーブル名と名前空間
+** pluck
+~pluck~ は、各レコードを丸ごとオブジェクトとしてとってくるのではなく、引数で指定したカラムのみの *配列* で返すメソッド。
+[[https://railsdoc.com/page/model_pluck][pluck | Railsドキュメント]]
+
+~select~ はカラム指定というところは同じだがオブジェクトを返す。
+** まとめて処理して高速化
+1つ1つ処理するのではなくて、同時に複数のレコードを処理することで高速化する。
+** 該当レコード数が莫大な場合
+メモリに全体を展開するのでなく、ある数ずつ展開してメモリ消費を抑える。
+
+[[https://railsdoc.com/page/find_each][find_each | Railsドキュメント]] ... 1件ずつ処理。
+[[https://railsdoc.com/page/find_in_batches][find_in_batches | Railsドキュメント]] ... 配列で処理。
+
+** 並列処理の例
+parallel gemによって。
+#+caption: 例
+#+begin_src ruby
+  require 'parallel'
+  result = Parallel.each(1..10) do |item|
+      item ** 2
+  end
+#+end_src
+** 開発に便利なページ
+- /rails/info/routes
+  routes一覧。
+- /letter_opener(自分で設定する)
+  送信したメール一覧を見られる。
+  gemが入ってる場合。
+  [[https://github.com/ryanb/letter_opener][ryanb/letter_opener: Preview mail in the browser instead of sending.]]
+- rails/mailers/
+  Action Mailerのプレビューを見られる。
+  previewを準備しておくといちいち送信せずとも、ローカルでダミーが入った文面を確認できる。
+** 開発環境でしか使えないメソッドが存在する
+~class_name~ は開発環境でしか使えない。
+gemによってはそういうパターンで使えないことがあることに注意しておく。
+
+- https://stackoverflow.com/questions/38776080/method-class-name-undefined-for-class-object-in-rails
+#+begin_quote
+class_name method is defined by yard gem. it works only development env.
+#+end_quote
+** rails console -s
+~rails console -s~ としてconsole起動すると、sandbox-modeになりコンソール内のDB操作が終了時にリセットされる。
+便利。
+** rails cできないとき
+springはキャッシュを保存して次のコマンド実行を早くするgem。
+テストも高速化できるので便利だが、たまに壊れて反映しなくなったりする。
+
+まずspringを止めて確認する。
+#+begin_src shell
+  bundle exec spring stop
+#+end_src
+** system specでTCP error がでるとき
+テストがある程度の長さを超えると、メモリの量が足りなくなってエラーを出す。
+特にMacだと起こるよう。
+#+begin_src shell
+  ulimit -n 1024
+#+end_src
+** seed_fuのlint
+走らせてエラーがないかチェックする。
+#+begin_src ruby
+namespace :db do
+  namespace :seed_fu do
+    desc 'Verify that all fixtures are valid'
+    task lint: :environment do
+      if Rails.env.test?
+        conn = ActiveRecord::Base.connection
+
+        %w[development test production].each do |env|
+          conn.transaction do
+            SeedFu.seed("db/fixtures/#{env}")
+            raise ActiveRecord::Rollback
+          end
+        end
+      else
+        system("bundle exec rails db:seed_fu:lint RAILS_ENV='test'")
+        raise if $CHILD_STATUS.exitstatus.nonzero?
+      end
+    end
+  end
+end
+#+end_src
+** どのメソッドか調べる
+どのgemのメソッドかわからないときに ~source_location~ が便利。
+https://docs.ruby-lang.org/ja/latest/method/Method/i/source_location.html
+#+begin_src ruby
+  character.method(:draw).source_location
+#+end_src
+** DBリセット
+環境を指定して、リセットを行う。
+データの初期化にseed_fu gemを使っている。
+
+#+begin_src shell
+  bundle exec rails db:migrate:reset && rails db:seed_fu
+#+end_src
+** デイリーでやること
+gemのupdateやマイグレーションが起きたときにやる。
+どこかで定型化して一気に実行するようにする。
+#+begin_src shell
+  git checkout develop && bundle install && bundle exec rails db:migrate
+#+end_src
+** scope
+scopeはクラスメソッド的なやつ。
+インスタンスには使えない。 ~User.scope...~
+[[https://railsguides.jp/active_record_querying.html#%E3%82%B9%E3%82%B3%E3%83%BC%E3%83%97][Active Record クエリインターフェイス - Railsガイド]]
+
+#+begin_quote
+スコープを設定することで、関連オブジェクトやモデルへのメソッド呼び出しとして参照される、よく使用されるクエリを指定することができます。
+#+end_quote
+** validation
+~valid?~ はAction Modelのバリデーションメソッド。
+[[https://devdocs.io/rails~6.1/activemodel/validations#method-i-valid-3F][Ruby on Rails 6.1 / ActiveModel::Validations#valid? — DevDocs]]
+引っかかってたらfalseになる。
+オーバーライドしてしまいそうになるメソッド名なのに注意。
+** ネストしたvalidateは反応しない
+ 特定の条件だけで発動するvalidation + 条件。`with_options: if`内で`if`を使うと、中のif条件が優先して実行されるため、こう書く必要がある。
+#+begin_src ruby
+  validates :term_date, date: { after: proc { Time.zone.now } }, if: proc { |p| p.term_date? && p.sellable?  }
+#+end_src
+** N+1問題
+[[id:8b69b8d4-1612-4dc5-8412-96b431fdd101][SQL]]がたくさん実行されて遅くなること。ループしているとレコードの数だけSQLが発行され、一気に遅くなる。
+includesを使うと少ないSQLにまとめられる。
+https://qiita.com/hirotakasasaki/items/e0be0b3fd7b0eb350327
+
+#+caption: includesで関連テーブルをまとめて取得する
+#+begin_src ruby
+  Page.includes(:category)
+#+end_src
+** 子のデータが存在するとき関連削除しないようにする
+~dependent: destroy~ だと子のデータもすべて破壊して整合性を保つ。
+それでは具合が悪いときもあるので、消さないようにする。
+#+begin_src ruby
+  has_many :contents, dependent: :restrict_with_error
+#+end_src
+
+あるいは、外部キーをnull更新する方法もある(nullableであれば)。
+#+begin_src ruby
+  has_many :contents, dependent: :nullify
+#+end_src
+** 文字列で返ってくる真偽値をbooleanオブジェクトに変換する
+文字列で返ってくる真偽値を、booleanオブジェクトとして扱いとき。ActiveModelのmoduleを使用する。
+言われてみるとDBでは文字列かをあまり意識せずに使える。
+#+begin_src ruby
+  ActiveModel::Type::Boolean.new.cast(value) == true
+#+end_src
+** slimで条件分岐
+[[https://qiita.com/mishiwata1015/items/407e924263d698ddeaae][【Rails】Slimで入れ子になっている要素の親タグのみを分岐させる - Qiita]]
+閉じタグがないため階層の上だけ条件分岐するためには特殊な書き方が必要になる。
+#+begin_export html
+- unless request.variant.present? && request.variant.include?(:phone)
+  / PCでのみサイドバーに
+  - args = [:section, class: 'sidebar']
+- else
+  / スマホではメインコンテンツに入れる
+  - args = [:section]
+= content_tag(*args)
+#+end_export
+** migration例
+#+begin_src shell
+  $ rails g migration ChangeProductPrice
+#+end_src
+
+#+begin_src ruby
+  class ChangeProductsPrice < ActiveRecord::Migration[7.0]
+    def up
+      change_table :products do |t|
+        t.change :price, :string
+      end
+    end
+
+    def down
+      change_table :products do |t|
+        t.change :price, :integer
+      end
+    end
+  end
+#+end_src
+
+#+begin_src shell
+ $ rails g migration AddNotNullOnBooks
+#+end_src
+
+#+begin_src ruby
+  class AddNotNullOnBooks < ActiveRecord::Migration[6.0]
+    def up
+      change_column_null :books, :user_id, false
+    end
+
+    def down
+      change_column_null :books, :user_id, true
+    end
+  end
+#+end_src
+* Tasks
+** TODO ECRデプロイ
+:LOGBOOK:
+CLOCK: [2022-04-07 Thu 22:47]--[2022-04-07 Thu 23:12] =>  0:25
+CLOCK: [2022-04-07 Thu 10:36]--[2022-04-07 Thu 11:01] =>  0:25
+:END:
+** TODO 実行時のwaringをエラーとして検出させるオプションを見つける
+** TODO [[https://egghead.io/blog/rails-graphql-typescript-react-apollo][Rails + GraphQL + TypeScript + React + Apollo | egghead.io]]
+** TODO [[https://www.amazon.com/Advanced-Rails-Recipes-Mike-Clark/dp/0978739221][Advanced Rails Recipes]]
+** TODO [[https://dxd2021.cto-a.org/program/time-table/b-3][クソコード動画「Userクラス」で考える技術的負債解消の観点/DXD2021]]
+クソコードから学ぶ。
+** TODO [[https://railsguides.jp/][Ruby on Rails ガイド：体系的に Rails を学ぼう]]
+:LOGBOOK:
+CLOCK: [2021-10-10 Sun 14:09]--[2021-10-10 Sun 14:43] =>  0:34
+:END:
+Rails のドキュメント。
+** TODO [[https://www.codewithjason.com/understanding-factory-bot-syntax-coding-factory-bot/][Understanding Factory Bot syntax by coding your own Factory Bot - Code with Jason]]
+Factory Botの作り方。
+** TODO Tips文書化
+:LOGBOOK:
+CLOCK: [2022-01-13 Thu 10:09]--[2022-01-13 Thu 10:34] =>  0:25
+CLOCK: [2022-01-10 Mon 23:52]--[2022-01-11 Tue 00:17] =>  0:25
+CLOCK: [2022-01-10 Mon 21:45]--[2022-01-10 Mon 22:10] =>  0:25
+CLOCK: [2021-12-26 Sun 15:43]--[2021-12-26 Sun 17:40] =>  1:57
+CLOCK: [2021-12-23 Thu 10:01]--[2021-12-23 Thu 10:56] =>  0:55
+:END:
+- 5730
+* Archives
+** DONE 誤字
+CLOSED: [2021-09-09 木 09:18]
+https://github.com/carrierwaveuploader/carrierwave/blob/a3ffc5381e70a4014b61b27b35540aa3b945910d/README.md#retry-option-for-douwload-from-remote-location
+
+PR送信完了。一字だけ。
+** DONE [[https://zenn.dev/prune/books/0d7d6e3c5f0496][Rails+React（SPA）TODOアプリチュートリアル【0から学ぶ】]]
+CLOSED: [2022-01-15 Sat 21:23]
+:LOGBOOK:
+CLOCK: [2022-01-15 Sat 20:49]--[2022-01-15 Sat 21:14] =>  0:25
+CLOCK: [2022-01-15 Sat 20:14]--[2022-01-15 Sat 20:39] =>  0:25
+CLOCK: [2022-01-15 Sat 16:12]--[2022-01-15 Sat 16:37] =>  0:25
+CLOCK: [2022-01-15 Sat 15:36]--[2022-01-15 Sat 16:01] =>  0:25
+CLOCK: [2022-01-15 Sat 15:06]--[2022-01-15 Sat 15:31] =>  0:25
+CLOCK: [2022-01-15 Sat 11:19]--[2022-01-15 Sat 11:44] =>  0:25
+CLOCK: [2022-01-15 Sat 10:35]--[2022-01-15 Sat 11:00] =>  0:25
+CLOCK: [2022-01-15 Sat 00:02]--[2022-01-15 Sat 00:27] =>  0:25
+CLOCK: [2022-01-10 Mon 20:08]--[2022-01-10 Mon 20:33] =>  0:25
+CLOCK: [2022-01-10 Mon 19:30]--[2022-01-10 Mon 19:55] =>  0:25
+:END:
+[[id:e04aa1a3-509c-45b2-ac64-53d69c961214][Rails]]  + [[id:dc50d818-d7d1-48a8-ad76-62ead617c670][React]]の本。
+
+ホットリロードができない。
+** CLOSE loggerを自動オン
+CLOSED: [2022-01-31 Mon 09:35]
+Rails console。ENVで分岐すれば本番コンソールでログレベルを上げる、ということができるはず。
+** DONE [[https://qiita.com/k-penguin-sato/items/07fef2f26fd6339e0e69][【Rails】graphql-rubyでAPIを作成 - Qiita]] -実行
+CLOSED: [2022-02-01 Tue 21:55] DEADLINE: <2022-02-25 Fri>
+:LOGBOOK:
+CLOCK: [2022-02-01 Tue 10:10]--[2022-02-01 Tue 10:35] =>  0:25
+CLOCK: [2022-02-01 Tue 09:18]--[2022-02-01 Tue 09:43] =>  0:25
+CLOCK: [2022-01-31 Mon 23:36]--[2022-02-01 Tue 00:01] =>  0:25
+CLOCK: [2022-01-31 Mon 22:03]--[2022-01-31 Mon 22:28] =>  0:25
+CLOCK: [2022-01-31 Mon 21:24]--[2022-01-31 Mon 21:49] =>  0:25
+:END:
+[[id:b4f456cf-d250-4877-ac4c-4b03144392f0][GraphQL]]をrailsでやるチュートリアル。
+** CLOSE [[https://www.amazon.co.jp/dp/B01N0SS6NF/ref=dp-kindle-redirect?_encoding=UTF8&btkr=1][Amazon.co.jp: Deploying Rails with Docker, Kubernetes and ECS (English Edition) eBook : Acuña, Pablo: Foreign Language Books]]
+CLOSED: [2022-01-29 Sat 11:16]
+:LOGBOOK:
+CLOCK: [2022-01-29 Sat 09:31]--[2022-01-29 Sat 09:56] =>  0:25
+CLOCK: [2022-01-29 Sat 09:04]--[2022-01-29 Sat 09:29] =>  0:25
+CLOCK: [2022-01-29 Sat 01:10]--[2022-01-29 Sat 01:36] =>  0:26
+CLOCK: [2022-01-28 Fri 22:38]--[2022-01-28 Fri 23:03] =>  0:25
+CLOCK: [2022-01-28 Fri 10:29]--[2022-01-28 Fri 10:54] =>  0:25
+CLOCK: [2022-01-28 Fri 09:59]--[2022-01-28 Fri 10:24] =>  0:25
+CLOCK: [2022-01-27 Thu 23:08]--[2022-01-27 Thu 23:33] =>  0:25
+CLOCK: [2022-01-27 Thu 22:35]--[2022-01-27 Thu 23:00] =>  0:25
+CLOCK: [2022-01-27 Thu 10:39]--[2022-01-27 Thu 11:04] =>  0:25
+CLOCK: [2022-01-27 Thu 10:03]--[2022-01-27 Thu 10:28] =>  0:25
+CLOCK: [2022-01-27 Thu 09:29]--[2022-01-27 Thu 09:54] =>  0:25
+CLOCK: [2022-01-27 Thu 00:29]--[2022-01-27 Thu 00:54] =>  0:25
+:END:
+- 24, 51
+
+KubernetesでRails deployまでやる本。
+AWSデプロイコマンドの挙動が違い、バージョンを合わせても動かずよくわからなかったので断念。こういうのは新しい本を買うべきだな。ローカル環境minikubeでの動作は確認できた。
+** DONE RailsとPumaの関係性                                      :DontKnow:
+CLOSED: [2022-08-14 Sun 18:50]
+2つの違いは何で、実際どのように、どの境界で処理しているのか。
+
+- rails: アプリケーション(ソースコード)
+- puma: アプリケーションサーバ。アプリケーションを動かしているもの
+
+#+begin_quote
+まず、webリクエストはwebサーバーが受け取ります。そのリクエストがRailsで処理できるものであれば、webサーバーはリクエストに簡単な処理を加えてアプリケーションサーバーに渡します。アプリケーションサーバーはRackを使ってRailsアプリケーションに話しかけます。Railsアプリケーションがリクエストの処理を終えると、Railsはレスポンスをアプリケーションサーバーに返します。そして、webサーバーはあなたのアプリケーションを使っているユーザーにレスポンスを返します。
+#+end_quote
+
+- [[https://qiita.com/jnchito/items/3884f9a2ccc057f8f3a3][Rails開発におけるwebサーバーとアプリケーションサーバーの違い（翻訳） - Qiita]]
+
+* References
+** [[https://github.com/thoughtbot/ruby-science][thoughtbot/ruby-science: The reference for writing fantastic Rails applications]]
+ruby, railsのより良い書き方のガイド。
+** [[https://qiita.com/takahiro1127/items/fcb81753eaf381b4b33c][なぜrailsの本番環境ではUnicorn,Nginxを使うのか? 　~ Rack,Unicorn,Nginxの連携について ~【Ruby On Railsでwebサービス運営】 - Qiita]]
+** [[https://stackoverflow.com/questions/61413196/how-to-run-capybara-tests-using-selenium-chrome-in-a-dockerised-rails-environm][docker - How to run Capybara tests using Selenium & Chrome in a Dockerised Rails environment on a Mac - Stack Overflow]]
+dockerのseleniumで動かす方法。
+** [[https://railsguides.jp/active_model_basics.html][Active Model の基礎 - Railsガイド]]
+モデルの説明。
+** [[https://qiita.com/jnchito/items/0ee47108972a0e302caf][永久保存版！？伊藤さん式・Railsアプリのアップグレード手順 - Qiita]]
+アップデートの流れ。
+** [[https://tech.kitchhike.com/entry/2017/03/07/190739][DHH流のルーティングで得られるメリットと、取り入れる上でのポイント - KitchHike Tech Blog]]
+ルーティングをどうするかの指針。
+** [[https://github.com/ankane/strong_migrations][ankane/strong_migrations: Catch unsafe migrations in development]]
+READMEに安全なマイグレーションの説明がある。
+** [[https://tech.speee.jp/entry/2020/06/30/110000][reg-suit によるビジュアルリグレッションテストで Rails アプリの CSS 改善サイクルが回り始めた話 - Speee DEVELOPER BLOG]]
+ビジュアルリグレッションテストの運用方法。
+** [[https://zenn.dev/yukito0616/articles/d3b7032e9f1e90][Only My Rails Way]]
+Rails Wayの定義について。
+** [[https://discuss.rubyonrails.org/][Ruby on Rails Discussions - Ruby on Rails Discussions]]
+Rails開発のディスカッション。
+** [[https://www.slideshare.net/ockeghem/ruby-on-rails-security-142250872][Railsエンジニアのためのウェブセキュリティ入門]]
+わかりやすいスライド。
+** [[https://techracho.bpsinc.jp/hachi8833/2020_05_13/91211][Rails開発者が採用面接で聞かれる想定Q&A 53問（翻訳）｜TechRacho by BPS株式会社]]
+ちゃんとRailsガイドを読まないときついな。

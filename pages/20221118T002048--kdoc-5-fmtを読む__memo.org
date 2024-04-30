@@ -1,0 +1,255 @@
+:properties:
+:ID: 20221118T002048
+:end:
+#+title:      KDOC 5: fmtを読む
+#+date:       [2022-11-18 Fri 00:20]
+#+filetags:   :memo:
+#+identifier: 20221118T002048
+
+fmtは[[id:7cacbaa3-3995-41cf-8b72-58d6e07468b1][Go]]の標準ライブラリの1つで、文字の出力に関する機能を提供する。
+
+- まず読む前にどういう機能なのか、どういうオプションがあるのか調べた
+- ちょいちょい理解が合ってるかコードで実験しながらやる。小さく実験していくなかで、使い方と仕組みの両方で理解が深まる。こうやったらどうなるのだろう、を思いついたりもする
+- 読みつつ、書く
+- メモを取る
+- コールグラフで全体像を見る。構造体とそのメソッドの種類をおおまかに把握する
+- テストを使って関数の使い方を確かめる
+- デバッガーを使って順に追う
+
+* memo
+:LOGBOOK:
+CLOCK: [2022-11-27 Sun 17:52]--[2022-11-27 Sun 18:17] =>  0:25
+CLOCK: [2022-11-27 Sun 17:27]--[2022-11-27 Sun 17:52] =>  0:25
+CLOCK: [2022-11-27 Sun 13:47]--[2022-11-27 Sun 14:12] =>  0:25
+CLOCK: [2022-11-23 Wed 19:57]--[2022-11-23 Wed 20:22] =>  0:25
+CLOCK: [2022-11-23 Wed 17:43]--[2022-11-23 Wed 18:08] =>  0:25
+CLOCK: [2022-11-23 Wed 17:18]--[2022-11-23 Wed 17:43] =>  0:25
+CLOCK: [2022-11-23 Wed 16:41]--[2022-11-23 Wed 17:06] =>  0:25
+CLOCK: [2022-11-23 Wed 16:07]--[2022-11-23 Wed 16:32] =>  0:25
+CLOCK: [2022-11-23 Wed 15:32]--[2022-11-23 Wed 15:57] =>  0:25
+CLOCK: [2022-11-23 Wed 13:42]--[2022-11-23 Wed 14:07] =>  0:25
+CLOCK: [2022-11-23 Wed 11:44]--[2022-11-23 Wed 12:09] =>  0:25
+CLOCK: [2022-11-23 Wed 11:18]--[2022-11-23 Wed 11:43] =>  0:25
+CLOCK: [2022-11-23 Wed 10:45]--[2022-11-23 Wed 11:10] =>  0:25
+CLOCK: [2022-11-23 Wed 10:19]--[2022-11-23 Wed 10:44] =>  0:25
+CLOCK: [2022-11-20 Sun 16:45]--[2022-11-20 Sun 17:10] =>  0:25
+CLOCK: [2022-11-20 Sun 16:14]--[2022-11-20 Sun 16:39] =>  0:25
+CLOCK: [2022-11-20 Sun 15:47]--[2022-11-20 Sun 16:12] =>  0:25
+CLOCK: [2022-11-20 Sun 13:50]--[2022-11-20 Sun 14:15] =>  0:25
+CLOCK: [2022-11-20 Sun 12:25]--[2022-11-20 Sun 12:50] =>  0:25
+CLOCK: [2022-11-20 Sun 11:43]--[2022-11-20 Sun 12:08] =>  0:25
+CLOCK: [2022-11-20 Sun 11:13]--[2022-11-20 Sun 11:38] =>  0:25
+CLOCK: [2022-11-20 Sun 01:02]--[2022-11-20 Sun 01:27] =>  0:25
+CLOCK: [2022-11-19 Sat 22:46]--[2022-11-19 Sat 23:11] =>  0:25
+CLOCK: [2022-11-19 Sat 22:18]--[2022-11-19 Sat 22:43] =>  0:25
+:END:
+printとformatがある。
+
+** Stateインターフェース
+#+begin_src go
+type State interface {
+	Write(b []byte) (n int, err error)
+	Width() (wid int, ok bool)
+	Precision() (prec int, ok bool)
+	Flag(c int) bool
+}
+#+end_src
+
+pp構造体がこれを満たしている。
+
+** pp構造体
+
+ppはプリンターの状態を持つ構造体。
+ppはfmtをフィールドに持っている。fmtは構造体で、printfで使われるフォーマッター。各種フラグやwidthを持っている。
+
+fmtFlagsは何だ。すべてbooleanだ。widthオプションを持ってるか、precオプション(小数精度)を持っているか。プラス、マイナス、シャープ、スペース、ゼロのフラグがあるな。これらの記号もつけられるオプションだな。%#vとか、%+vとかある。
+
+ppに多くのメソッドがついている。
+
+widthはfmtのwidthに移譲している。widthはintで、出力する文字列の長さ。
+precisionはそういうオプションがあって、小数精度ってことらしい。
+
+** GoStringer
+型定義したものの出力をするためのものらしい。フォーマット%#vとかで出てくるやつ。実装してみると、%#vはGoString()で上書きされた。%fはどちらも使わない。PrintlnではString()が使用された。
+
+#+begin_src go
+package main
+
+import (
+	"fmt"
+)
+
+type test struct {
+	Name string
+}
+
+func (t test) GoString() string {
+	return "this is GoString()"
+}
+
+func (t test) String() string {
+	return "this is String()"
+}
+
+func main() {
+	t := test{
+		Name: "aaa",
+	}
+
+	fmt.Printf("%#v\n", t)
+	// this is GoString()
+
+	fmt.Printf("%+f\n", t)
+	// {%!f(string=aaa)}
+
+	fmt.Printf("%#f\n", t)
+	// {%!f(string=aaa)}
+
+	fmt.Println(t)
+	// this is String()
+}
+#+end_src
+
+** printの種類
+
+- 出力先
+- フォーマットを取るもの
+
+の組み合わせでいくつかある感じ。
+
+それらをちょっと変えて、本質的にはdoPrint()が処理してる。
+doPrint()は引数文字列をすべて処理するループをつくり、処理はprintArg()に移譲する。書き込むとは、p.buf.writeByte()することだ。
+doPrintln()はdoPrint()の改行する版で、だいたい最後にp.buf.writeByte('\n')が入るだけ。
+
+** fmtとprinter
+ppのメソッドのいくつかは、同名のfmtにある関数へ移譲している。
+
+signed integerは符号付き整数。
+
+** 多くのfmt{型}関数
+fmtInteger()は長い関数。各オプションの処理をしているように見える。基数の数で分岐したり、プレフィクスによって変えたり。rune型のverbによって条件分岐する。fmtのintegerに移譲する。基数によって引数を変えてる。
+float、complex, string...。それぞれオプションがあるかで分岐する。実際にbufに書き込みしてるのは、このfmt{型}関数のようだ。で、最終的には、たとえばFprint()の場合は関数内でwriterに書き込んで処理が完了する。途中まではpp構造体のbufフィールドで持っておく。
+
+#+begin_src go
+  func Fprint(w io.Writer, a ...any) (n int, err error) {
+          p := newPrinter() 	// *pp型
+          p.doPrint(a)              // p.bufにprint結果をセットする
+          n, err = w.Write(p.buf)   // writerに書き込み
+          p.free()                  // ppをリセット
+          return
+  }
+#+end_src
+
+Fprintfの場合は引数にフォーマット文字列が追加される。
+~fmt.Fprintf(writer, "Hello, %s", name)~ みたいな。
+
+verbはどうやって渡されるか。例えば%#vの、 ~v~ の部分がverbで、 ~#~ の部分がオプションぽいな。
+
+それらのfmt{型}関数を読んでるのは、printArg()だ。大きなswitch文になっていて、使用するフォーマット関数を振り分ける。printArg()はdoPrint()から呼び出される。doPrint()はFpritf,Sprintf,Sprintなど見たことのある公開メソッドから呼び出される。
+** print時の全体の流れ
+つまりFprintf(),Sprintf()... -> doPrint() -> printArg() -> fmtInteger(), fmtString()...という感じ。
+** printArg()でverbを渡すのはformat系のみ
+printArg()で、verbを伝播して渡すのはdoPrintf()系のみ。doPrint()では、printArg(arg, 'v')と固定オプションを指定する扱いになっている。
+** doPrint()
+anyの引数に対してループ回してる。複数引数が渡されたときはそれぞれを表示するからな。
+doPrint("aa", "bb") だと ~aa bb~ みたく1文字空けて表示する。
+
+anyの引数に対してループを作り、それぞれに ~p.printArg(arg, 'v')~ を実行する。runeは ~v~ で固定されている。
+
+** trucateString
+手頃そうな関数を調べてみる。左から数えた文字数で切るtruncateString()。例えば指定文字数が2文字だと、 ~"aaaa" -> "aa"~ とするような非常に単純な機能。しかし実装は一見ぱっと見でわかりにくい。最初はスライスの記法だけでいけるように見える。これは桁の方が文字数より多いケースに対応している。普通にスライス記法で書くとindex out of rangeエラーになるだろう。
+
+nとiは逆方向にインクリメントが進むので、長さが5だとすると iが ~0, 1, 2, 3, 4~ となるとき、nは ~4, 3, 2, 1, 0~ となる。nがマイナスの値に突入したとき、iはアクセスできる最大のインデックスを示している。
+
+#+caption: 単独で実行できるようにコードを書き換えている。本物のコードは桁数や桁数指定フラグを渡す
+#+begin_src go :imports fmt
+  func truncateString(s string, b bool) string {
+          if b {
+                  n := 5
+                  for i := range s {
+                          n--
+                          if n < 0 {
+                                  return s[:i]
+                          }
+                  }
+          }
+          return s
+  }
+
+  func main() {
+          fmt.Println("aaa"[:2]) // aa
+          // fmt.Println("aaa"[:5]) // これはエラーになる
+          fmt.Println(truncateString("aaaiiiuuu", true)) // aaaii
+          fmt.Println(truncateString("aaa", true))       // aaa
+          fmt.Println(truncateString("", true))	   // ""
+  }
+#+end_src
+
+** truncate(バイト列バージョン)
+バイト列バージョン。文字エンコードが絡むのでちょっと処理が増えるが基本は同じ。
+
+バイト列の初期化方法。シングルクォートを使うか、あるいは[]byte("文字列")で初期化するのがわかりやすい。
+utf8.RuneSelfは整数128のエイリアス。utf8エンコードの基本の数になる。8ビット=1バイト(256通り)として1文字分。128を超えると2バイトになる。
+
+#+begin_src go :imports '("fmt" "unicode/utf8")
+  // rune, sizeを返す
+  fmt.Println(utf8.DecodeRune([]byte("a"))) // 97 1
+  fmt.Println(utf8.DecodeRune([]byte("¶"))) // 182 2
+  fmt.Println(utf8.DecodeRune([]byte("あ"))) // 12354 3
+#+end_src
+
+#+caption: 単独で実行できるように改変
+#+begin_src go
+  func truncate(b []byte) []byte {
+          if true {
+                  n := 5 // ここは小数精度設定で注入される
+                  for i := 0; i < len(b); {
+                          n--
+                          if n < 0 {
+                                  return b[:i]
+                          }
+                          wid := 1
+                          if b[i] >= utf8.RuneSelf {
+                                  _, wid = utf8.DecodeRune(b[i:])
+                          }
+                          // 文字のバイト数分ループを飛ばす
+                          i += wid
+                  }
+          }
+          return b
+  }
+
+  func main() {
+          test := []byte("abcdefg")
+          fmt.Println(test, truncate(test)) // truncateされる
+          nihon := []byte("日本語日本語")
+          fmt.Println(len(nihon), len(truncate(nihon))) // 18 -> 15
+          // 3バイト文字が5個にtruncateされることで、バイト数が15になる
+  }
+#+end_src
+
+** precisionの指定方法
+小数精度の指定方法。
+
+#+begin_src go
+  fmt.Printf("%.9s", 4) # -> %!s(int=000000004)
+#+end_src
+** フォーマットの対応付けはどうやってるか
+フォーマットを解釈するところはわかったが、対応づけてフォーマット文字の部分に文字列を加えている部分がよくわかってない。
+
+doPrintf(format: string, a: any)みたいな感じで呼ばれる。
+** それぞれの構造体の役割
+- pp(print.go)
+- fmt(format.go) ppに埋め込まれる構造体。fmt{型}系メソッドがある
+- buffer(print.go) bufferへの大きな依存を防ぐため、シンプルにbyteで実装している
+- ss(scan.go)
+** 表示の意味
+os.Stdout(/dev/stdout)に書き込むのが、表示の意味。
+結果がすべて出るまでは一時的にpp.bufに入れておき、一気にos.Stdoutに書き込んで表示する。
+
+一見println()とファイルは関係なさそうだが、実行するたびにファイル書き込みを行っている。
+** References
+読む解くのに文字コード系やバイトに関する知識が必要だった。
+
+- [[https://qiita.com/seihmd/items/4a878e7fa340d7963fee][Goのruneを理解するためのUnicode知識 - Qiita]]
+- [[https://qiita.com/catatsuy/items/bccc2c76be501e98382a][utf8としてvalidなバイト列を判定する方法をGoから見る - Qiita]]

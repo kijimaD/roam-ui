@@ -1,0 +1,105 @@
+:properties:
+:ID: 20230527T000152
+:end:
+#+title:      KDOC 25: docker progress を読む
+#+date:       [2023-05-27 Sat 00:01]
+#+filetags:   :memo:
+#+identifier: 20230527T000152
+
+[[id:1658782a-d331-464b-9fd7-1f8233b8b7f8][Docker]]でimage pullをするときに出る、プログレスバーをどうやっているのか調べる。
+
+* Tasks
+** DONE Progressのコードを読む
+CLOSED: [2023-05-27 Sat 14:29]
+:LOGBOOK:
+CLOCK: [2023-05-27 Sat 12:24]--[2023-05-27 Sat 12:49] =>  0:25
+CLOCK: [2023-05-27 Sat 11:56]--[2023-05-27 Sat 12:21] =>  0:25
+CLOCK: [2023-05-27 Sat 11:13]--[2023-05-27 Sat 11:38] =>  0:25
+CLOCK: [2023-05-27 Sat 10:32]--[2023-05-27 Sat 10:57] =>  0:25
+CLOCK: [2023-05-27 Sat 00:01]--[2023-05-27 Sat 00:26] =>  0:25
+:END:
+
+- [[https://github.com/moby/moby/pull/45602/files][[backport 24.0] c8d/pull: Use same progress action as distribution by vvoland · Pull Request #45602 · moby/moby]]
+
+を見て、progressという箇所があることを知る。ここを読んでみる。
+
+- インターフェースprogressUpdaterは更新するインターフェース
+  - 構造体pullProgressはインターフェースを満たす。こいつはStore, ShowExistsを持っていて情報を保持してる
+- 構造体jobsはミューテックスとdescを持つ。descsは何に使われている
+  - イメージの情報が入ってるんだろうな
+
+#+caption: Descriptor
+#+begin_src git-permalink
+https://github.com/opencontainers/image-spec/blob/9615142d016838b5dfe7453f80af0be74feb5c7c/specs-go/v1/descriptor.go#L22-L50
+#+end_src
+
+#+RESULTS:
+#+begin_example go
+type Descriptor struct {
+	// MediaType is the media type of the object this schema refers to.
+	MediaType string `json:"mediaType,omitempty"`
+
+	// Digest is the digest of the targeted content.
+	Digest digest.Digest `json:"digest"`
+
+	// Size specifies the size in bytes of the blob.
+	Size int64 `json:"size"`
+
+	// URLs specifies a list of URLs from which this object MAY be downloaded
+	URLs []string `json:"urls,omitempty"`
+
+	// Annotations contains arbitrary metadata relating to the targeted content.
+	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Data is an embedding of the targeted content. This is encoded as a base64
+	// string when marshalled to JSON (automatically, by encoding/json). If
+	// present, Data can be used directly to avoid fetching the targeted content.
+	Data []byte `json:"data,omitempty"`
+
+	// Platform describes the platform which the image in the manifest runs on.
+	//
+	// This should only be used when referring to a manifest.
+	Platform *Platform `json:"platform,omitempty"`
+
+	// ArtifactType is the IANA media type of this artifact.
+	ArtifactType string `json:"artifactType,omitempty"`
+}
+#+end_example
+
+- 表示するのはshowProgress。こいつはupdater interfaceを受け取って、更新する方法を抽象化している
+  - データはレシーバのjobsに保持している
+
+[[file:./images/20230527-progress.drawio.svg]]
+
+- UpdateProgressは何をしているか
+  - storeの中のstatusを更新する(アクティブなものだけにする)
+  - 引数のjobsでループ
+  - アクティブなjobのときだけWriteProgress()で進捗を書き込む
+  - 条件によって、「ダウンロード完了」とか、「すでに存在」とかメッセージを分ける
+
+** DONE Pullのコードを読む
+CLOSED: [2023-05-27 Sat 15:45]
+:LOGBOOK:
+CLOCK: [2023-05-27 Sat 15:13]--[2023-05-27 Sat 15:38] =>  0:25
+CLOCK: [2023-05-27 Sat 14:46]--[2023-05-27 Sat 15:11] =>  0:25
+:END:
+
+- daemon/containerd/image_pull.go
+- レシーバはImageService。イメージに関するアクションを一手に引き受けるインターフェース及び構造体
+  - インターフェース https://github.com/kd-collective/moby/blob/c030f7f40d62ecabfedd1cf96fbb734ce051ce73/daemon/image_service.go#L25
+  - 構造体 https://github.com/kd-collective/moby/blob/c030f7f40d62ecabfedd1cf96fbb734ce051ce73/daemon/containerd/service.go#L20
+- platformを読み取ってオプションに追加する
+- image名をパースしてrefオブジェクトを作成する
+- tagOrDigestをパースして分離する
+- パースした結果はrefに入れる
+- リゾルバーを作成してオプションに追加する
+- ハンドル関数をオプションに追加する
+  - ハンドル関数の中身でjobsを追加している
+- ここのハンドラは何をするのだろう
+- JSONProgressOutputオブジェクトを作成
+- finishProgressを作成
+- deferでfinishProgress()を実行する
+- オプションにWithPullUnpack, WithPullSnapshotterを追加する
+  - 展開とかスナップショット...
+- Pullを実行する。これが本質か。Pull自体はrefがあれば実行できる。コードの途中は本質ではない。
+  - imageService.client.Pull なので、普通にdocker clientのpullを実行するんだろう

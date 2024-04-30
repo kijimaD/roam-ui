@@ -1,0 +1,163 @@
+:PROPERTIES:
+:ID:       8b79aef9-1073-4788-9e81-68cc63e4f997
+:END:
+#+title: game
+* 概要
+ゲーム開発についてまとめる。
+* Memo
+** [[https://krkrz.github.io/krkr2doc/kag3doc/contents/Tags.html][吉里吉里タグリファレンス]]
+タグリファレンス。
+** [[https://game-materials.com/][【フリー素材】ゲームまてりあるず｜無料の背景イラスト | フリーの背景素材集]]
+いい感じの背景素材。
+** ミンサガのメモ
+
+序盤の流れ。
+
+- 金稼ぎ
+- 追い剥ぎとパーティ人数を集める
+- ウハンジの秘密(0%~30%)
+  - 南エスタミルのパブ
+  - 北エスタミルのアムト神殿
+- 宿屋の娘(0%~30%)
+  - メルビル1階の詰所
+  - メルビル2階PUB
+  - 宿屋で依頼を受ける
+  - 雑貨屋
+  - 道具屋
+- ミイラ商人(0%~30%)
+  - 北エスタミルのPUB
+  - 2回右折
+- 10術集め
+- 合成サイコブラスト
+- ゲッコ族
+- 古文書
+  - ホークを仲間に入れない状態でやる
+
+中盤。
+
+- 火のロッド(45%~85%)
+  - 細剣クラスLV3にする
+  - 強度を+2にする
+  - 術法を10個習得する
+- しもべ狩り
+  - フロンティア
+  - ウエストエンド
+  - ヤシ開拓村
+  - 伸ばしたいパラメータと関係ある攻撃手段で攻撃する
+- 聖杯入手。後からやること
+  - ウエストエンドのPUBでヴァンパイアの洞窟情報(ヴァンパイア復活)
+  - 北エスタミルPUBで聖杯情報
+  - 北エスタミル地下道
+- 聖杯利用の準備
+  - 幻体戦士術を購入(北エスタミル/アムト神殿)
+  - 細工師クラス装備
+  - クイックタイム装備
+
+終盤。
+
+- メルビル襲撃計画
+- ウコムの海底神殿
+- 鉱山襲撃道場- 鉱山襲撃道場
+
+リスト。
+
+- 金稼ぎ
+  - 恐竜の卵
+    - 一番手前の穴
+  - キットンソックス
+    - イスマス城、入って右の階段を上がった先
+  - タイニーフェザーの羽
+- 3術合成(低コスト全体攻撃)
+  - サイコブラスト
+  - 生命波動
+  - 覚醒印
+- 3術合成(クイックタイム) 3160金
+  - タイムディシーバー(メルビル/ウコム神殿)
+  - ブラッドフリーズ(南エスタミル/ウコム神殿)
+  - 氷幻術(メルビル/術法店)
+- 防具
+  - 体: フィールドアーマー(ミルザブール)
+  - 頭: スマートヘルム(ローバーン)
+  - 手: ドミナントグラブ(ミルザブール)
+  - 足: レッグメイル(ミルザブール)
+
+考え中。
+
+- タイムディシーバーを覚えさせたり幻体戦士をやらそうとすると強い術の攻撃手段がなくなる
+  - 術合成やクラスで軽減できずBP/EP消費が大きくなりがち
+- 技をどのタイミングで覚えればいいか。術だけだと後半威力不足になった。ステータスにも悪影響がある
+
+* Tasks
+** TODO [[https://www.amazon.co.jp/%E3%82%A2%E3%82%A4%E3%83%87%E3%82%A2%E3%81%AE%E3%81%A4%E3%81%8F%E3%82%8A%E6%96%B9-%E3%82%B8%E3%82%A7%E3%83%BC%E3%83%A0%E3%82%B9-W-%E3%83%A4%E3%83%B3%E3%82%B0/dp/4484881047/ref=sr_1_1?__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=4W8A8W7SST7N&keywords=%E3%82%A2%E3%82%A4%E3%83%87%E3%82%A2%E3%81%AE%E4%BD%9C%E3%82%8A%E6%96%B9&qid=1704553562&s=books&sprefix=%E3%82%A2%E3%82%A4%E3%83%87%E3%82%A2%E3%81%AE%E3%81%A4%E3%81%8F%E3%82%8A%E3%81%8B%E3%81%9F%2Cstripbooks%2C172&sr=1-1][アイデアのつくり方 | ジェームス W.ヤング, 竹内 均, 今井 茂雄 |本 | 通販 | Amazon]]
+アイデアの作り方の解説。
+** TODO [[https://www.amazon.co.jp/%E3%82%B2%E3%83%BC%E3%83%A0%E3%82%B7%E3%83%8A%E3%83%AA%E3%82%AA%E5%85%A5%E9%96%80%E2%80%95%E5%9F%BA%E7%A4%8E%E7%9F%A5%E8%AD%98%E3%81%8B%E3%82%89%E8%A8%AD%E5%AE%9A%E3%83%BB%E3%82%AD%E3%83%A3%E3%83%A9%E3%82%AF%E3%82%BF%E3%83%BC%E3%83%BB%E3%83%97%E3%83%AD%E3%83%83%E3%83%88%E3%83%BB%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%81%AE%E6%8A%80%E6%B3%95%E3%81%BE%E3%81%A7-%E5%8C%97%E5%B2%A1-%E9%9B%84%E4%B8%80%E6%9C%97-ebook/dp/B09FKVM3HK/ref=sr_1_2?__mk_ja_JP=%E3%82%AB%E3%82%BF%E3%82%AB%E3%83%8A&crid=2W9TYEWGW4U2F&keywords=%E3%82%B2%E3%83%BC%E3%83%A0%E3%82%B7%E3%83%8A%E3%83%AA%E3%82%AA&qid=1704535073&sprefix=%E3%82%B2%E3%83%BC%E3%83%A0%E3%81%97%E3%81%AA%E3%82%8A%E3%81%8A%2Caps%2C218&sr=8-2][ゲームシナリオ入門―基礎知識から設定・キャラクター・プロット・テキストの技法まで]]
+** [[https://github.com/reg-viz/reg-cli][reg-viz/reg-cli: 📷 Visual regression test tool.]]
+画像でテストするツール。ゲーム開発に使える。
+** TODO [[https://themindstudios.com/blog/how-to-make-an-idle-clicker-game/][How to Make a Clicker Game: Inside the Incremental Game Development Process - Mind Studios]]
+クリッカーゲームの作り方。
+** TODO [[https://www.slideshare.net/nyaakobayashi/ss-12559078][ゲームシナリオ構成論 The Method for the game sinario writings for multi-ending …]]
+シナリオ構成の説明スライド。
+** TODO [[https://www.slideshare.net/ChizuruSugimoto/ss-177364439][ゲームの仕様書を書こうまとめ]]
+仕様書の書き方を説明したスライド。
+** TODO [[http://gameaccessibilityguidelines.com/basic/][Game accessibility guidelines | Basic]]
+ゲームのアクセシビリティガイドライン。
+* Reference
+** [[https://techracho.bpsinc.jp/ecn/2023_09_22/134060][python:pygameで生態系[第一章]植物編｜TechRacho by BPS株式会社]]
+簡単な生態系シミュレータ。アイデアが面白い。
+** [[http://play.elevatorsaga.com/][Elevator Saga - the elevator programming game]]
+エレベーターのロジックを考えるゲーム。
+** [[https://www.daikoku.co.jp/games/chepachi/][チェッパチ 依存症チェックゲーム]]
+依存症チェックゲーム。
+** [[https://ehmorris.com/lander/][Lander]]
+着陸させるゲーム。こういうゲームあったな。
+** [[https://oliveremberton.com/2014/life-is-a-game-this-is-your-strategy-guide/][Life is a game. This is your strategy guide]]
+人生の各ステージをゲームで表す。
+** [[https://www.vgmaps.com/Atlas/NES/index.htm][The Video Game Atlas - NES Maps]]
+ゲームマップのスクショ集。
+** [[http://planetpixelemporium.com/earth.html][Planet Earth Texture Maps]]
+惑星のテクスチャ。
+** [[https://en.wikipedia.org/wiki/Game_design_document][Game design document - Wikipedia]]
+ゲームデザインドキュメント。
+** [[https://ldjam.com/][ldjam.com | Ludum Dare game jam]]
+ゲームを作るイベント。
+** [[https://github.com/a-b-street/abstreet][a-b-street/abstreet: Transportation planning and traffic simulation software for creating cities friendlier to walking, biking, and public transit]]
+めちゃよさそうなOSS交通シミュレーターゲーム。
+** [[https://github.com/leereilly/games#user-content-strategy][leereilly/games]]
+OSSのゲーム一覧。
+** [[http://particle-clicker.web.cern.ch/][Particle Clicker]]
+OSSのクリックゲーム。
+** [[https://the-house.arturkot.pl/][The House]]
+クリックゲーム。
+** [[https://laineus.com/][Drive(L:) - Web屋です。ゲームや曲も作っています。]]
+いくつもゲームを作っているすごい人。
+けっこう年が近い。
+** [[http://www.roguebasin.com/index.php/Main_Page][RogueBasin]]
+ローグライク作成にあたっての情報源。
+** [[https://cataclysmdda.org/design-doc/][CDDA Design Document]]
+実際のDesign Documentの例。
+** [[https://www.gdcvault.com/play/1025698/Indie][GDC Vault - Indie Soapbox]]
+Game Developers Conferenceの動画。
+** [[https://karastonesite.com/][KARA STONE]]
+変わったゲームの作者。
+** [[https://www.indiehackers.com/interviews/page/1][Interviews with Indie Hackers]]
+個人開発者へのインタビュー集。
+** [[http://www.bay12games.com/][Bay 12 Games: Dwarf Fortress]]
+Dwarf Fortressの開発元サイト。
+** [[https://game-icons.net/][4086 free SVG and PNG icons for your games or apps | Game-icons.net]]
+ゲームに使えるフリーのアイコン。
+** [[https://opengameart.org/][OpenGameArt.org]]
+ゲームに使える素材集。
+** [[https://freesound.org/][Freesound - Freesound]]
+ゲームに使える効果音集。
+** [[http://www-cs-students.stanford.edu/~amitp/gameprog.html][Amit’s Game Programming Information]]
+ゲームプログラミングの情報集。
+** [[https://2dwillneverdie.com/][2D Will Never Die – A sprite and pixel art gallery with tutorials]]
+2Dのすごいサイト。
+** [[https://cryamore.tumblr.com/][Cryamore Development Blog]]
+ピクセルアートの会社のサイト。
+** [[https://korcs.info/ogs/][Otter's Graphic Synthesizer]]
+アニメーションに使える8方向のキャラクター画像を生成するツール。
+** [[https://gafferongames.com/][Gaffer On Games]]
+** [[https://www.codeandweb.com/free-sprite-sheet-packer][Sprite Sheet Packer - A free alternative to TexturePacker]]
+スプライトをまとめるツール。
+* Archives

@@ -1,0 +1,17 @@
+name: StaleFile
+
+on:
+  schedule:
+    - cron: "0 0 1 * *" # 月初
+  workflow_dispatch:
+
+jobs:
+  stale_file:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: kijimaD/StaleFile@v0.0.4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          file_extension: '*.org'
+          days_until_stale: 60
