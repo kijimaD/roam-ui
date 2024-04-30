@@ -17,6 +17,7 @@ docker run --detach --name roam-build-container roam-build
 docker cp roam-build-container:/roam/org-roam.db .
 sudo chown -R $USER:$USER ./org-roam.db
 rm -rf .git
+rm -rf .gitignore
 ls -al
 
 cd ../
