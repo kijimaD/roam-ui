@@ -1,4 +1,4 @@
-name: Publish org-roam-ui page
+name: Commit
 
 on:
   workflow_dispatch:
@@ -6,12 +6,12 @@ on:
     # branches:
     #   - main
 
-permissions:
-  actions: write
-  checks: write
-  contents: write
-  pages: write
-  id-token: write
+# permissions:
+#   actions: write
+#   checks: write
+#   contents: write
+#   pages: write
+#   id-token: write
 
 jobs:
   commit:
@@ -35,15 +35,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.generate.outputs.token }}
         run: ./commit.sh
-
-  main:
-    needs:
-      - commit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Generate org-roam-ui page
-        uses: ikoamu/org-roam-ui-hosting@main
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
         with:
-          deploy-to-pages: true
-          org-roam-directory: pages
-          org-roam-db-filename: org-roam.db
+          token: ${{ steps.generate.outputs.token }}
+          repository: kijimaD/roam-ui
+          event-type: publish

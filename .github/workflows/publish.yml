@@ -1,0 +1,17 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [publish]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate org-roam-ui page
+        uses: ikoamu/org-roam-ui-hosting@main
+        with:
+          deploy-to-pages: true
+          org-roam-directory: pages
+          org-roam-db-filename: org-roam.db
