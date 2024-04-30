@@ -20,3 +20,4 @@ jobs:
           deploy-to-pages: true
           org-roam-directory: pages
           org-roam-db-filename: org-roam.db
+          site-title: Insomnia
