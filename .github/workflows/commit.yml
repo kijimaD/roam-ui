@@ -2,9 +2,11 @@ name: Commit
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [commit]
   push:
-    # branches:
-    #   - main
+    branches:
+      - main
 
 jobs:
   commit:
@@ -28,6 +30,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.generate.outputs.token }}
         run: ./commit.sh
+      # ↑でコミットした最新コミットで実行したいが、このワークフローがトリガーされた時点のコミットでpublishが走る。アクションが対応してない(アクション内でcommitしてる)のでdispatchで対応する
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         with:
