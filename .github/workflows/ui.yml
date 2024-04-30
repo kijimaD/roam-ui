@@ -17,6 +17,12 @@ jobs:
   commit:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate GitHub Apps token
+        id: generate
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
       - uses: actions/checkout@v3
       - uses: actions/cache@v4
         with:
@@ -27,7 +33,7 @@ jobs:
       - name: build and commit
         if: "!contains(github.event.head_commit.message, ':robot:')"
         env:
-          GITHUB_TOKEN: ${{ secrets.WRITE_PACKAGE }}
+          GITHUB_TOKEN: ${{ steps.generate.outputs.token }}
         run: ./commit.sh
 
   main:
