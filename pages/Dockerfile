@@ -19,7 +19,7 @@ RUN apt -y update && \
     gnuplot \
     emacs \
     language-pack-ja \
-    fonts-ipafont # ↓なぜかどのフォント指定しても、TakaoPGothicとして表示・エクスポートされている
+    fonts-ipafont # なぜかどのフォント指定しても、TakaoPGothicとして表示・エクスポートされている
 
 RUN apt -y install \
     xvfb \
