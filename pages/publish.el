@@ -125,18 +125,20 @@
    ;; "</div></div>"
    (sxml-to-xml
     `(footer (@ (class "footer py-3"))
-      (div (@ (class "container"))
-           (div (@ (class "row "))
-                (div (@ (class "col-md-4")) "")
-                (div (@ (class "col-sm col-md"))
-                     (nav (@ (class "navbar"))
-                          (a (@ (class "nav-link text-secondary small px-0") (href "./index.html")) "Insomnia")
-                          (a (@ (class "nav-link text-secondary small px-0") (href "./sitemap.html")) "Sitemap")
-                          (a (@ (class "nav-link text-secondary small px-0") (href "https://github.com/kijimaD/roam")) "Repository")
-                          (a (@ (class "nav-link text-secondary small px-0") (href "https://github.com/kijimaD")) "@kijimaD")))
-                (div (@ (class "col-md-4")) "")))))
-   (sxml-to-xml
-    `(script (@ (src "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"))))))
+             (div (@ (class "container"))
+                  (div (@ (class "row "))
+                       (div (@ (class "col-md-4")) "")
+                       (div (@ (class "col-sm col-md"))
+                            (nav (@ (class "navbar"))
+                                 (a (@ (class "nav-link text-secondary small px-0") (href "./index.html")) "Insomnia")
+                                 (a (@ (class "nav-link text-secondary small px-0") (href "./sitemap.html")) "Sitemap")
+                                 (a (@ (class "nav-link text-secondary small px-0") (href "https://github.com/kijimaD/roam")) "Repository")
+                                 (a (@ (class "nav-link text-secondary small px-0") (href "https://github.com/kijimaD")) "@kijimaD")))
+                       (div (@ (class "col-md-4")) "")))))
+   ;; 今のところBootstrapのJS箇所は使っていない
+   ;; (sxml-to-xml
+   ;;  `(script (@ (src "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"))))
+   ))
 
 (setq org-html-preamble  #'dw/site-header
       org-html-postamble #'dw/site-footer
@@ -167,30 +169,30 @@
 
 ;; Compile
 (setq org-publish-project-alist
-  `(
-     ("kijima:roam"
-      :recursive t
-      :base-extension "org"
-      :base-directory "./"
-      :exclude "NEWS.org"               ;; FIXME: can't specify .packages directory...
-      ;; :publishing-function #'org-html-publish-to-html
-      :publishing-function org-html-publish-to-html
-      :publishing-directory "./public"
+      `(
+        ("kijima:roam"
+         :recursive t
+         :base-extension "org"
+         :base-directory "./"
+         :exclude "NEWS.org"               ;; FIXME: can't specify .packages directory...
+         ;; :publishing-function #'org-html-publish-to-html
+         :publishing-function org-html-publish-to-html
+         :publishing-directory "./public"
 
-      :html-link-home "/"
-      :html-head nil  ;; cleans up anything that would have been in there.
-      :html-head-extra ,my-blog-extra-head
-      :html-head-include-default-style nil
-      :html-head-include-scripts nil
+         :html-link-home "/"
+         :html-head nil  ;; cleans up anything that would have been in there.
+         :html-head-extra ,my-blog-extra-head
+         :html-head-include-default-style nil
+         :html-head-include-scripts nil
 
-      :html-link-up ""
-      :html-link-home ""
-      :with-timestamps nil
-      :with-toc nil
+         :html-link-up ""
+         :html-link-home ""
+         :with-timestamps nil
+         :with-toc nil
 
-      :sitemap-title "Sitemap"
-      :auto-sitemap t             ;; generate sitemap.org automatically
-      )))
+         :sitemap-title "Sitemap"
+         :auto-sitemap t             ;; generate sitemap.org automatically
+         )))
 
 (defun generate-org-roam-db ()
   (interactive)
@@ -246,7 +248,7 @@
   "Get a buffer property called NAME as a string."
   (org-with-point-at 1
     (if (re-search-forward (concat "^#\\+" name ": \\(.*\\)")
-                             (point-max) t)
+                           (point-max) t)
         (buffer-substring-no-properties
          (match-beginning 1)
          (match-end 1))
