@@ -1,12 +1,12 @@
 :properties:
-:ID: 20250320T102813
-:mtime:    20250320110311
-:ctime:    20250320102829
+:ID: 20250427T175852
+:mtime:    20250428123439
+:ctime:    20250427175857
 :end:
-#+title:      KDOC 347: 大文字小文字の変換をそらで書く
-#+date:       [2025-03-20 Thu 10:28]
-#+filetags:   :draft:code:
-#+identifier: 20250320T102813
+#+title:      KDOC 350: 『正直不動産』
+#+date:       [2025-04-27 Sun 17:58]
+#+filetags:   :draft:book:
+#+identifier: 20250427T175852
 
 # (denote-rename-file-using-front-matter (buffer-file-name) 0)
 # (save-excursion (while (re-search-backward ":draft" nil t) (replace-match "")))
@@ -66,28 +66,11 @@
 * 概要
 # 本文(見出しも設定する)
 
-大文字--小文字のASCIIコードオフセットを覚えておかなくても、runeの値を使えばすぐ計算できる。
+『正直不動産』は嘘をつけない営業マンが、業界を生き抜いていく不動産漫画。
+* メモ
 
-#+begin_src go :results output
-  import "fmt"
-
-  func main() {
-          fmt.Println(conv('a'))
-          fmt.Println(conv('b'))
-          fmt.Println(conv('z'))
-  }
-
-  func conv(c rune) string {
-          return string(c+('A'-'a'))
-  }
-#+end_src
-
-#+RESULTS:
-#+begin_src
-A
-B
-Z
-#+end_src
+- 騙されないためには、個人の側でも勉強して財務や法律、業界に詳しくなければならない、というメッセージを理解できた
+- どんな不利益を被るかを知れば、不動産について勉強するモチベーションになる
 
 * 関連
 # 関連するエントリ。なぜ関連させたか理由を書く。意味のあるつながりを意識的につくる。
