@@ -46,14 +46,21 @@
 (use-package esxml
   :ensure t)
 
-(use-package denote
-  :ensure t
-  :straight (:host github :repo "protesilaos/denote")
-  :custom ((denote-directory "./")
-           (denote-file-type 'org)))
+(add-to-list 'load-path "./vendor/denote-2.0.0")
+(require 'denote)
+(require 'denote-org-dblock)
+(setq denote-directory ".")
+(setq denote-file-type 'org)
 
-(use-package denote-org
-  :ensure t)
+;; バージョンが上がったら動かなくなったため...
+;; (use-package denote
+;;   :ensure t
+;;   :straight (:host github :repo "protesilaos/denote")
+;;   :custom ((denote-directory "./")
+;;            (denote-file-type 'org)))
+
+;; (use-package denote-org
+;;   :ensure t)
 
 (use-package org-roam
   :ensure t)
