@@ -76,10 +76,8 @@
 (use-package webfeeder
   :straight (:host github :repo "emacsmirror/webfeeder")
   :ensure t)
-(defun kd/webfeeder-empty-summary (_)
-  "Empty summary."
-  "")
-(advice-add 'webfeeder--html-summary :filter-return #'kd/webfeeder-empty-summary)
+;; デフォルトの webfeeder-body-libxml を使うと正しくないXMLを吐いてしまうのでフォールバックで用意されている関数を使う
+(setq webfeeder-body-function 'webfeeder-body-default)
 
 (require 'ox-publish)
 
@@ -235,22 +233,6 @@
         (org-agenda-remove-tags t)
         (htmlize-output-type 'inline-css)))
 
-(setq org-agenda-custom-commands
-      '(("Future" agenda ""
-         ((org-agenda-span 60)
-          (org-agenda-start-day "0d")
-          (org-agenda-start-with-log-mode t)
-          (org-agenda-tag-filter-preset '("-Habit"))
-          (org-agenda-files '("./")))
-         ("./public/future-agenda.html"))
-        ("Past" agenda ""
-         ((org-agenda-span 365)
-          (org-agenda-start-day "-365d")
-          (org-agenda-start-with-log-mode t)
-          (org-agenda-tag-filter-preset '("-Habit"))
-          (org-agenda-files '("./")))
-         ("./public/past-agenda.html"))))
-
 (setq org-agenda-prefix-format
       `((agenda . " %i %-12(vulpea-agenda-category)%?-12t% s")
         (todo . " %i %-12(vulpea-agenda-category) ")
@@ -290,8 +272,6 @@
 
 (defun kd/publish ()
   (org-publish-all t)
-  ;; (org-agenda nil "Future") ;; test
-  ;; (org-agenda nil "Past") ;; test
   (org-batch-store-agenda-views)
 
   (webfeeder-build
