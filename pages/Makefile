@@ -62,7 +62,6 @@ odp2pdf: ## ODPスライドをPDFに変換する
 .PHONY: lint-run
 lint-run: ## lintを実行する
 	export COMPOSE_DOCKER_CLI_BUILD=1 && docker-compose run lint make textlint
-	export COMPOSE_DOCKER_CLI_BUILD=1 && docker-compose run lint make dockle
 	make hadolint
 
 .PHONY: textlint
@@ -78,10 +77,6 @@ fix:
 hadolint:
 	docker run --rm -i hadolint/hadolint < Dockerfile
 
-.PHONY: dockle
-dockle:
-	dockle ghcr.io/kijimad/roam:master
-
 .PHONY: server
 server: ## webサーバを起動する
 	docker run -d -v "$(PWD)/public":/usr/share/nginx/html -w /usr/share/nginx/html -p 8005:80 --name roam-server --restart always docker.io/nginx:1.27
@@ -89,6 +84,10 @@ server: ## webサーバを起動する
 .PHONY: watch
 watch: ## 自動更新する
 	./scripts/watch.sh
+
+.PHONY: relink
+relink: ## リンクのタイトルを更新する
+	find . -name '*.org' | xargs -n1 ./scripts/relink.sh
 
 .PHONY: prune
 prune: ## 不要なファイルを消す
