@@ -1,13 +1,5 @@
 .DEFAULT_GOAL := help
 
-# example ================
-
-greeting := holla
-greetings := ciao mhoro talofa
-
-$(greeting):
-	echo "greeting"
-
 # build tasks ================
 
 .PHONY: update-index
@@ -59,23 +51,18 @@ odp2pdf: ## ODPスライドをPDFに変換する
 
 # development ================
 
-.PHONY: lint-run
-lint-run: ## lintを実行する
-	export COMPOSE_DOCKER_CLI_BUILD=1 && docker-compose run lint make textlint
-	make hadolint
-
 .PHONY: textlint
 textlint:
 	docker build . --target textlint -t roam_textlint
-	docker run -v $(PWD):/work/roam -w /work --rm roam_textlint bash -c "npx textlint --fix -c ./.textlintrc ./roam/*.org"
+	docker run -v $(PWD):/work/roam -w /work/roam --rm roam_textlint bash -c "npx textlint --fix -c ./.textlintrc ./*.org"
 
-.PHONY: fix
-fix:
-	docker run -v $(PWD):/work -w /work --rm ghcr.io/kijimad/roam_textlint npx textlint --fix -c ./.textlintrc *.org
+.PHONY: relink
+relink: ## リンクのタイトルをすべて更新する
+	find . -name '*.org' | xargs -n1 ./scripts/relink.sh
 
-.PHONY: hadolint
-hadolint:
-	docker run --rm -i hadolint/hadolint < Dockerfile
+.PHONY: rename
+rename: ## denoteファイルをすべて更新する
+	emacs --batch -l ./publish.el --funcall kd/denote-batch-rename-in-current-directory
 
 .PHONY: server
 server: ## webサーバを起動する
@@ -85,17 +72,9 @@ server: ## webサーバを起動する
 watch: ## 自動更新する
 	./scripts/watch.sh
 
-.PHONY: relink
-relink: ## リンクのタイトルを更新する
-	find . -name '*.org' | xargs -n1 ./scripts/relink.sh
-
-.PHONY: prune
-prune: ## 不要なファイルを消す
-	./scripts/prune.sh
-
-.PHONY: user
-user: ## ファイルの権限をすべてユーザ権限にする
-	sudo chown -R $USER:$USER .
+.PHONY: prunefile
+prunefile: ## 不要なファイルを消す
+	./scripts/prunefile.sh
 
 .PHONY: help
 help: ## ヘルプを表示する
