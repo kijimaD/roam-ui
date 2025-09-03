@@ -1,12 +1,16 @@
+:PROPERTIES:
+:mtime:    20250902212728
+:ctime:    20250902212728
+:END:
 :properties:
-:ID: 20250827T082332
-:mtime:    20250903195332
-:ctime:    20250827082335
+:ID: 20250902T212635
+:mtime:    20250902212716
+:ctime:    20250902212639
 :end:
-#+title:      KDOC 430: require.NoErrorを使う
-#+date:       [2025-08-27 Wed 08:23]
-#+filetags:   :draft:wiki:
-#+identifier: 20250827T082332
+#+title:      KDOC 433: daysPerYearの値は何か?
+#+date:       [2025-09-02 Tue 21:26]
+#+filetags:   :draft:permanent:
+#+identifier: 20250902T212635
 
 # (kd/denote-kdoc-rename)
 # (denote-rename-file-using-front-matter (buffer-file-name) 0)
@@ -67,16 +71,20 @@
 * 概要
 # 本文(見出しも設定する)
 
-~testify/assert~ はGo言語でテスト用のアサーションヘルパーを提供するライブラリである。
+Go言語の ~json~ packageには不思議な値がある。これはなにか。
 
-よく使うものに、エラー処理が簡単に記載できる、NoError()という関数がある。これには2つの種類がある。
+#+begin_src git-permalink
+https://github.com/golang/go/blob/11f11f2a00aa3149a6ea69a50e7b7b429cf368b7/src/encoding/json/v2/arshal_time.go#L469-L473
+#+end_src
 
-- ~require.NoError()~ -- 失敗したらそのテストは中断する
-- ~assert.NoError()~ -- 失敗してもそのテストを中断しない
-
-というような違いがある。 ~require~ のほうは知らなかった。
-
-# 使って確かめる
+#+RESULTS:
+#+begin_src
+// daysPerYear is the exact average number of days in a year according to
+// the Gregorian calender, which has an extra day each year that is
+// a multiple of 4, unless it is evenly divisible by 100 but not by 400.
+// This does not take into account leap seconds, which are not deterministic.
+const daysPerYear = 365.2425
+#+end_src
 
 * 関連
 # 関連するエントリ。なぜ関連させたか理由を書く。意味のあるつながりを意識的につくる。

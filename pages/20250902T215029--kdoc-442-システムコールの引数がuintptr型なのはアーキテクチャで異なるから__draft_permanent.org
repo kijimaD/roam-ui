@@ -1,12 +1,12 @@
 :properties:
-:ID: 20250827T082332
-:mtime:    20250903195332
-:ctime:    20250827082335
+:ID: 20250902T215029
+:mtime:    20250902215152
+:ctime:    20250902215043
 :end:
-#+title:      KDOC 430: require.NoErrorを使う
-#+date:       [2025-08-27 Wed 08:23]
-#+filetags:   :draft:wiki:
-#+identifier: 20250827T082332
+#+title:      KDOC 442: システムコールの引数がuintptr型なのはアーキテクチャで異なるから
+#+date:       [2025-09-02 Tue 21:50]
+#+filetags:   :draft:permanent:
+#+identifier: 20250902T215029
 
 # (kd/denote-kdoc-rename)
 # (denote-rename-file-using-front-matter (buffer-file-name) 0)
@@ -67,16 +67,9 @@
 * 概要
 # 本文(見出しも設定する)
 
-~testify/assert~ はGo言語でテスト用のアサーションヘルパーを提供するライブラリである。
+システムコールの引数がuintptr型の理由はアーキテクチャによって異なるから。
 
-よく使うものに、エラー処理が簡単に記載できる、NoError()という関数がある。これには2つの種類がある。
-
-- ~require.NoError()~ -- 失敗したらそのテストは中断する
-- ~assert.NoError()~ -- 失敗してもそのテストを中断しない
-
-というような違いがある。 ~require~ のほうは知らなかった。
-
-# 使って確かめる
+10082。
 
 * 関連
 # 関連するエントリ。なぜ関連させたか理由を書く。意味のあるつながりを意識的につくる。

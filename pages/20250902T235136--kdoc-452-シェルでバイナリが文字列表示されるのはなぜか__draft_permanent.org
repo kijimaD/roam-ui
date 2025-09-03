@@ -1,12 +1,12 @@
 :properties:
-:ID: 20250827T082332
-:mtime:    20250903195332
-:ctime:    20250827082335
+:ID: 20250902T235136
+:mtime:    20250902235413
+:ctime:    20250902235151
 :end:
-#+title:      KDOC 430: require.NoErrorを使う
-#+date:       [2025-08-27 Wed 08:23]
-#+filetags:   :draft:wiki:
-#+identifier: 20250827T082332
+#+title:      KDOC 452: シェルでバイナリが文字列表示されるのはなぜか?
+#+date:       [2025-09-02 Tue 23:51]
+#+filetags:   :draft:permanent:
+#+identifier: 20250902T235136
 
 # (kd/denote-kdoc-rename)
 # (denote-rename-file-using-front-matter (buffer-file-name) 0)
@@ -67,16 +67,20 @@
 * 概要
 # 本文(見出しも設定する)
 
-~testify/assert~ はGo言語でテスト用のアサーションヘルパーを提供するライブラリである。
+- ~xxd~ はバイナリ表示 -- 16進数表示を変換表示する
+- -r で、16進数表示からバイナリ表示に切り替わる
 
-よく使うものに、エラー処理が簡単に記載できる、NoError()という関数がある。これには2つの種類がある。
+#+caption: これで文字列表示される理由
+#+begin_src shell
+echo "6141" | xxd -r -p
+#+end_src
 
-- ~require.NoError()~ -- 失敗したらそのテストは中断する
-- ~assert.NoError()~ -- 失敗してもそのテストを中断しない
+#+RESULTS:
+#+begin_src
+aA
+#+end_src
 
-というような違いがある。 ~require~ のほうは知らなかった。
-
-# 使って確かめる
+-r オプションによって16進数表示からバイナリ表示に切り替わっている。しかし、ASCII文字が表示されている。これはなぜなのだろうか。
 
 * 関連
 # 関連するエントリ。なぜ関連させたか理由を書く。意味のあるつながりを意識的につくる。

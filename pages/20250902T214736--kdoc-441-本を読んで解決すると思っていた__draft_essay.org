@@ -1,12 +1,12 @@
 :properties:
-:ID: 20250827T082332
-:mtime:    20250903195332
-:ctime:    20250827082335
+:ID: 20250902T214736
+:mtime:    20250902214859
+:ctime:    20250902214748
 :end:
-#+title:      KDOC 430: require.NoErrorを使う
-#+date:       [2025-08-27 Wed 08:23]
-#+filetags:   :draft:wiki:
-#+identifier: 20250827T082332
+#+title:      KDOC 441: 本を読んで解決すると思っていた
+#+date:       [2025-09-02 Tue 21:47]
+#+filetags:   :draft:essay:
+#+identifier: 20250902T214736
 
 # (kd/denote-kdoc-rename)
 # (denote-rename-file-using-front-matter (buffer-file-name) 0)
@@ -67,16 +67,7 @@
 * 概要
 # 本文(見出しも設定する)
 
-~testify/assert~ はGo言語でテスト用のアサーションヘルパーを提供するライブラリである。
-
-よく使うものに、エラー処理が簡単に記載できる、NoError()という関数がある。これには2つの種類がある。
-
-- ~require.NoError()~ -- 失敗したらそのテストは中断する
-- ~assert.NoError()~ -- 失敗してもそのテストを中断しない
-
-というような違いがある。 ~require~ のほうは知らなかった。
-
-# 使って確かめる
+本を読んで解決すると思っていた頃がある。タイトルの甘い言葉。
 
 * 関連
 # 関連するエントリ。なぜ関連させたか理由を書く。意味のあるつながりを意識的につくる。
