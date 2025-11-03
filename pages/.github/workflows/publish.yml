@@ -38,6 +38,9 @@ jobs:
   release_image:
     if: github.ref == 'refs/heads/main'
     needs: tag
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/build.yml
     with:
       image: ghcr.io/kijimad/roam_release:${{ needs.tag.outputs.git-tag }},ghcr.io/kijimad/roam_release:latest
@@ -46,6 +49,9 @@ jobs:
 
   staging_image:
     needs: tag
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/build.yml
     with:
       image: ghcr.io/kijimad/roam_staging:${{ needs.tag.outputs.git-tag }},ghcr.io/kijimad/roam_staging:latest
@@ -54,6 +60,9 @@ jobs:
 
   build_image:
     needs: tag
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/build.yml
     with:
       image: ghcr.io/kijimad/roam_build:${{ needs.tag.outputs.git-tag }},ghcr.io/kijimad/roam_build:latest
