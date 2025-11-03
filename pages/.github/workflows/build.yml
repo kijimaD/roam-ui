@@ -9,6 +9,10 @@ on:
       target:
         type: string
         required: true
+    secrets:
+      token:
+        required: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,7 +37,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.token }}
 
       - name: Cache Docker layers
         uses: actions/cache@v4
