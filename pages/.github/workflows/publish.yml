@@ -45,8 +45,7 @@ jobs:
     with:
       image: ghcr.io/kijimad/roam_release:${{ needs.tag.outputs.git-tag }},ghcr.io/kijimad/roam_release:latest
       target: release
-    secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
 
   staging_image:
     needs: tag
@@ -57,8 +56,7 @@ jobs:
     with:
       image: ghcr.io/kijimad/roam_staging:${{ needs.tag.outputs.git-tag }},ghcr.io/kijimad/roam_staging:latest
       target: staging
-    secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
 
   build_image:
     needs: tag
@@ -69,8 +67,7 @@ jobs:
     with:
       image: ghcr.io/kijimad/roam_build:${{ needs.tag.outputs.git-tag }},ghcr.io/kijimad/roam_build:latest
       target: build
-    secrets:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
 
   publish:
     needs:
